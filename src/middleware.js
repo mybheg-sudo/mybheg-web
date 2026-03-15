@@ -7,6 +7,7 @@ export function middleware(request) {
   if (
     pathname.startsWith('/login') ||
     pathname.startsWith('/api/auth/login') ||
+    pathname.startsWith('/api/seed') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
     pathname === '/api/auth/me'
