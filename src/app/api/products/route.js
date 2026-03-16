@@ -24,13 +24,13 @@ export async function GET(request) {
     }
 
     const products = await getMany(`
-      SELECT p.id, p.shopify_id, p.title, p.vendor, p.product_type, p.status,
+      SELECT p.id, p.shopify_product_id, p.title, p.vendor, p.product_type, p.status,
         p.tags, p.published_at, p.updated_at,
-        (SELECT COUNT(*)::int FROM shopify_variants v WHERE v.product_id = p.id) AS variant_count,
-        (SELECT MIN(price)::numeric FROM shopify_variants v WHERE v.product_id = p.id) AS min_price,
-        (SELECT MAX(price)::numeric FROM shopify_variants v WHERE v.product_id = p.id) AS max_price,
-        (SELECT SUM(inventory_quantity)::int FROM shopify_variants v WHERE v.product_id = p.id) AS total_stock,
-        (SELECT url FROM shopify_images si WHERE si.product_id = p.id AND si.position = 1 LIMIT 1) AS image_url
+        (SELECT COUNT(*)::int FROM shopify_product_variants v WHERE v.product_id = p.id) AS variant_count,
+        (SELECT MIN(price)::numeric FROM shopify_product_variants v WHERE v.product_id = p.id) AS min_price,
+        (SELECT MAX(price)::numeric FROM shopify_product_variants v WHERE v.product_id = p.id) AS max_price,
+        (SELECT SUM(inventory_quantity)::int FROM shopify_product_variants v WHERE v.product_id = p.id) AS total_stock,
+        (SELECT src FROM shopify_product_images si WHERE si.product_id = p.id AND si.position = 1 LIMIT 1) AS image_url
       FROM shopify_products p
       ${whereClause}
       ORDER BY p.updated_at DESC NULLS LAST
