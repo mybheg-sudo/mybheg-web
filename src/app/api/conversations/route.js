@@ -70,8 +70,25 @@ export async function GET(request) {
       ORDER BY last_msg.timestamp DESC NULLS LAST
       LIMIT $1 OFFSET $2
     `, params);
+    // Total count for pagination
+    const countParams = [userId];
+    let countFilter = '';
+    if (search) {
+      countFilter = `AND (c.name ILIKE $2 OR c.phone ILIKE $2)`;
+      countParams.push(`%${search}%`);
+    }
+    const countResult = await getMany(`
+      SELECT COUNT(*)::int as count FROM contacts c 
+      WHERE c.user_id = $1 ${filterClause} ${countFilter}
+    `, countParams);
+    const total = countResult[0]?.count || 0;
 
-    return NextResponse.json({ success: true, data: conversations });
+    return NextResponse.json({ 
+      success: true, 
+      data: conversations, 
+      total,
+      hasMore: offset + conversations.length < total,
+    });
   } catch (error) {
     console.error('Conversations API error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

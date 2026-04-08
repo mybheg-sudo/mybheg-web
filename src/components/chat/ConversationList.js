@@ -39,14 +39,15 @@ const filters = [
 ];
 
 export default function ConversationList({
-  conversations, selectedId, onSelect, filter, onFilterChange, search, onSearchChange, loading
+  conversations, selectedId, onSelect, filter, onFilterChange, search, onSearchChange, loading,
+  hasMore, onLoadMore, total
 }) {
   return (
     <div className="conversation-list-panel">
       <div className="conversation-list-header">
         <div className="conversation-list-title">
           <h2>💬 Mesajlar</h2>
-          <span className="badge badge-gray">{conversations.length}</span>
+          <span className="badge badge-gray">{total || conversations.length}</span>
         </div>
         <div className="search-box">
           <span className="search-box-icon">🔍</span>
@@ -119,6 +120,15 @@ export default function ConversationList({
               </div>
             </div>
           ))
+        )}
+        {hasMore && (
+          <button onClick={onLoadMore} style={{
+            width: '100%', padding: '12px', border: 'none', background: 'none',
+            color: 'var(--text-link)', fontSize: 'var(--text-sm)', cursor: 'pointer',
+            borderTop: '1px solid var(--border-primary)',
+          }}>
+            ⬇ Daha fazla yükle ({conversations.length}/{total})
+          </button>
         )}
       </div>
     </div>

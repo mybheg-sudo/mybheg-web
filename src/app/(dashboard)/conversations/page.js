@@ -13,21 +13,34 @@ export default function ConversationsPage() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState(0);
 
   // Fetch conversations
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = useCallback(async (loadMore = false) => {
     try {
-      const params = new URLSearchParams({ filter });
+      const p = loadMore ? page + 1 : 1;
+      const params = new URLSearchParams({ filter, page: p.toString() });
       if (search) params.set('search', search);
       const res = await fetch(`/api/conversations?${params}`);
       const data = await res.json();
-      if (data.success) setConversations(data.data);
+      if (data.success) {
+        if (loadMore) {
+          setConversations(prev => [...prev, ...data.data]);
+        } else {
+          setConversations(data.data);
+        }
+        setHasMore(data.hasMore || false);
+        setTotal(data.total || 0);
+        setPage(p);
+      }
     } catch (err) {
       console.error('Failed to fetch conversations:', err);
     } finally {
       setLoading(false);
     }
-  }, [filter, search]);
+  }, [filter, search, page]);
 
   useEffect(() => {
     fetchConversations();
@@ -97,8 +110,11 @@ export default function ConversationsPage() {
         filter={filter}
         onFilterChange={setFilter}
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={v => { setSearch(v); setPage(1); }}
         loading={loading}
+        hasMore={hasMore}
+        total={total}
+        onLoadMore={() => fetchConversations(true)}
       />
 
       {selectedId && chatData ? (

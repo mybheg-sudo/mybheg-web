@@ -83,3 +83,20 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+// Update order note
+export async function PATCH(request, { params }) {
+  try {
+    const { id } = await params;
+    const { note } = await request.json();
+
+    await query(`
+      UPDATE orders SET note = $1, updated_at = NOW() WHERE id = $2
+    `, [note, id]);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Order note update error:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}

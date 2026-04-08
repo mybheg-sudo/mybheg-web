@@ -356,6 +356,42 @@ export default function OrderDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Internal Note */}
+            <div style={cardStyle}>
+              <div style={cardHeaderStyle}>📝 Sipariş Notu</div>
+              <div style={cardBodyStyle}>
+                <textarea
+                  id="order-note"
+                  defaultValue={order.note || ''}
+                  placeholder="Dahili not ekleyin..."
+                  rows={3}
+                  style={{
+                    width: '100%', resize: 'vertical', fontSize: 'var(--text-sm)',
+                    background: 'var(--bg-hover)', border: '1px solid var(--border-primary)',
+                    borderRadius: 'var(--radius-sm)', padding: 'var(--space-3)',
+                    color: 'var(--text-primary)', outline: 'none',
+                  }}
+                />
+                <button
+                  className="btn btn-sm"
+                  style={{ marginTop: 'var(--space-2)', background: 'var(--accent-purple)', color: '#fff', border: 'none', padding: '6px 16px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 'var(--text-xs)' }}
+                  onClick={async () => {
+                    const note = document.getElementById('order-note').value;
+                    try {
+                      const res = await fetch(`/api/orders/${params.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ note }),
+                      });
+                      const d = await res.json();
+                      if (d.success) alert('Not kaydedildi ✅');
+                      else alert('Hata: ' + d.error);
+                    } catch(e) { alert('Kaydetme hatası'); }
+                  }}
+                >💾 Kaydet</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
