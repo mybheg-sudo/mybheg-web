@@ -17,7 +17,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ success: false, error: 'Sipariş bulunamadı' }, { status: 404 });
     }
 
-    const [lineItems, fulfillments, statusLogs] = await Promise.all([
+    const [dbLineItems, fulfillments, statusLogs] = await Promise.all([
       getMany(`
         SELECT * FROM order_line_items WHERE order_id = $1 ORDER BY id
       `, [id]),
@@ -28,6 +28,22 @@ export async function GET(request, { params }) {
         SELECT * FROM order_status_logs WHERE order_id = $1 ORDER BY created_at DESC LIMIT 20
       `, [id]),
     ]);
+
+    // Fallback: order_line_items tablosu boşsa, orders.line_items JSON'dan oku
+    let lineItems = dbLineItems;
+    if (lineItems.length === 0 && order.line_items) {
+      try {
+        const parsed = typeof order.line_items === 'string' ? JSON.parse(order.line_items) : order.line_items;
+        lineItems = (parsed || []).map((item, i) => ({
+          id: i + 1,
+          title: item.title || item.name || 'Ürün',
+          quantity: item.quantity || 1,
+          price: item.price || '0',
+          sku: item.sku || null,
+          variant_title: item.variant_title || null,
+        }));
+      } catch (e) { /* JSON parse hatası — boş bırak */ }
+    }
 
     return NextResponse.json({
       success: true,
