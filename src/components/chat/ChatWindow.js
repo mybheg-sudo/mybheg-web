@@ -27,8 +27,11 @@ function groupMessagesByDate(messages) {
 export default function ChatWindow({ contact, messages, onSendMessage, loading, onToggleProfile }) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -44,15 +47,39 @@ export default function ChatWindow({ contact, messages, onSendMessage, loading, 
   }, [input]);
 
   const handleSend = async () => {
-    if (!input.trim() || sending) return;
+    if ((!input.trim() && !selectedFile) || sending) return;
     const msg = input.trim();
     setInput('');
     setSending(true);
     try {
-      await onSendMessage(msg);
+      if (selectedFile) {
+        // Upload file
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('contact_id', contact.id);
+        if (msg) formData.append('caption', msg);
+        await fetch('/api/messages/upload', { method: 'POST', body: formData });
+        setSelectedFile(null);
+        setFilePreview(null);
+      } else {
+        await onSendMessage(msg);
+      }
     } finally {
       setSending(false);
       textareaRef.current?.focus();
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setFilePreview(ev.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreview(null);
     }
   };
 
@@ -135,6 +162,25 @@ export default function ChatWindow({ contact, messages, onSendMessage, loading, 
 
       {/* Input */}
       <div className="message-input-area">
+        {/* File preview */}
+        {selectedFile && (
+          <div style={{
+            padding: '8px 16px', borderBottom: '1px solid var(--border-primary)',
+            display: 'flex', alignItems: 'center', gap: '10px', fontSize: 'var(--text-xs)',
+          }}>
+            {filePreview ? (
+              <img src={filePreview} alt="" style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontSize: '24px' }}>📄</span>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="truncate" style={{ fontWeight: 500 }}>{selectedFile.name}</div>
+              <div style={{ color: 'var(--text-muted)' }}>{(selectedFile.size / 1024).toFixed(0)} KB</div>
+            </div>
+            <button onClick={() => { setSelectedFile(null); setFilePreview(null); }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+          </div>
+        )}
         <div className="message-input-row">
           <div className="message-input-wrapper">
             <textarea
@@ -142,7 +188,7 @@ export default function ChatWindow({ contact, messages, onSendMessage, loading, 
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Mesajınızı yazın..."
+              placeholder={selectedFile ? 'Açıklama ekleyin (opsiyonel)...' : 'Mesajınızı yazın...'}
               rows={1}
               disabled={sending}
             />
@@ -150,15 +196,19 @@ export default function ChatWindow({ contact, messages, onSendMessage, loading, 
           <button
             className="send-btn"
             onClick={handleSend}
-            disabled={!input.trim() || sending}
+            disabled={(!input.trim() && !selectedFile) || sending}
             title="Gönder"
           >
             {sending ? '⏳' : '➤'}
           </button>
         </div>
+        <input type="file" ref={fileInputRef} style={{ display: 'none' }}
+          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
+          onChange={handleFileSelect}
+        />
         <div className="message-input-tools">
           <button className="tool-btn">📝 Şablon</button>
-          <button className="tool-btn">📎 Dosya</button>
+          <button className="tool-btn" onClick={() => fileInputRef.current?.click()}>📎 Dosya</button>
           <button className={`tool-btn ${contact?.is_manual_mode ? 'active' : ''}`}>
             {contact?.is_manual_mode ? '🤖 AI Kapalı' : '🤖 AI Açık'}
           </button>
