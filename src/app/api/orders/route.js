@@ -55,12 +55,26 @@ export async function GET(request) {
       LIMIT $1 OFFSET $2
     `, params);
 
-    // Count total for pagination
-    let countQuery = `SELECT COUNT(*)::int as count FROM orders WHERE 1=1`;
+    // Count total for pagination — must include ALL active filters
+    let countQuery = `SELECT COUNT(*)::int as count FROM orders o WHERE 1=1`;
     let countParams = [];
     if (status !== 'ALL') {
       countParams.push(status);
-      countQuery += ` AND status = $${countParams.length}`;
+      countQuery += ` AND o.status = $${countParams.length}`;
+    }
+    if (search) {
+      countParams.push(`%${search}%`);
+      countQuery += ` AND (o.order_name ILIKE $${countParams.length} OR o.customer_name ILIKE $${countParams.length} OR o.phone_number ILIKE $${countParams.length})`;
+    }
+    const dateFrom = searchParams.get('from');
+    const dateTo = searchParams.get('to');
+    if (dateFrom) {
+      countParams.push(dateFrom);
+      countQuery += ` AND o.created_at_shopify >= $${countParams.length}`;
+    }
+    if (dateTo) {
+      countParams.push(dateTo);
+      countQuery += ` AND o.created_at_shopify < ($${countParams.length}::date + INTERVAL '1 day')`;
     }
     const total = await getOne(countQuery, countParams);
 

@@ -78,8 +78,32 @@ export default function ChatWindow({ contact, messages, onSendMessage, loading, 
           </div>
         </div>
         <div className="chat-header-actions">
+          <button
+            className="btn-icon btn-ghost"
+            title={contact?.is_manual_mode ? 'AI Moda Geç' : 'Manuel Moda Geç'}
+            style={{
+              fontSize: '11px', padding: '4px 10px', borderRadius: 'var(--radius-sm)',
+              background: contact?.is_manual_mode ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)',
+              color: contact?.is_manual_mode ? '#fca5a5' : '#86efac',
+              border: 'none', cursor: 'pointer', fontWeight: 600,
+            }}
+            onClick={async () => {
+              const newMode = !contact?.is_manual_mode;
+              try {
+                await fetch(`/api/contacts/${contact.id}/manual`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ manual: newMode }),
+                });
+                // Force re-render by parent refetch
+                if (onToggleProfile) onToggleProfile();
+                setTimeout(() => onToggleProfile && onToggleProfile(), 100);
+              } catch(e) { console.error(e); }
+            }}
+          >
+            {contact?.is_manual_mode ? '🤖 AI Moda Geç' : '👤 Manuel Mod'}
+          </button>
           <button className="btn-icon btn-ghost" onClick={onToggleProfile} title="Profil">👤</button>
-          <button className="btn-icon btn-ghost" title="Ara">🔍</button>
         </div>
       </div>
 
