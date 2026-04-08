@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 
 async function getDashboardData(userId) {
   try {
-    const [todayOrders, pendingOrders, todayMessages, totalContacts, activeProducts, recentActivity] = await Promise.all([
+    const [todayOrders, pendingOrders, todayMessages, totalContacts, activeProducts, recentActivity, dailyOrders] = await Promise.all([
       // orders tablosunda user_id yok — phone_number üzerinden contacts'a bağlı
       getOne(`
         SELECT COUNT(*) as count, COALESCE(SUM(total_price), 0)::numeric as revenue 
@@ -23,6 +23,13 @@ async function getDashboardData(userId) {
         ) combined
         ORDER BY ts DESC LIMIT 8
       `, [userId]),
+      // Daily orders for mini chart (last 7 days)
+      getMany(`
+        SELECT TO_CHAR(d.day, 'DD/MM') as day, COALESCE(COUNT(o.id), 0)::int as count
+        FROM generate_series((NOW() - INTERVAL '6 days')::date, NOW()::date, '1 day') AS d(day)
+        LEFT JOIN orders o ON o.created_at::date = d.day::date
+        GROUP BY d.day ORDER BY d.day
+      `),
     ]);
 
     return {
@@ -33,13 +40,14 @@ async function getDashboardData(userId) {
       totalContacts: parseInt(totalContacts?.count || 0),
       activeProducts: parseInt(activeProducts?.count || 0),
       recentActivity: recentActivity || [],
+      dailyOrders: dailyOrders || [],
     };
   } catch (error) {
     console.error('Dashboard data error:', error);
     return {
       todayOrders: 0, revenue: 0, pendingOrders: 0,
       todayMessages: 0, totalContacts: 0, activeProducts: 0,
-      recentActivity: [],
+      recentActivity: [], dailyOrders: [],
     };
   }
 }
@@ -70,49 +78,71 @@ export default async function DashboardPage() {
           <StatCard icon="🏷️" value={data.activeProducts} label="Aktif Ürün" color="var(--accent-pink)" />
         </div>
 
-        {/* Recent Activity */}
-        <div style={{
-          background: 'var(--surface-card)',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--border-primary)',
-          backdropFilter: 'blur(20px)',
-        }}>
+        {/* Bottom Row: Activity + Mini Chart */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+          {/* Recent Activity */}
           <div style={{
-            padding: 'var(--space-4) var(--space-5)',
-            borderBottom: '1px solid var(--border-primary)',
-            fontWeight: 600,
+            background: 'var(--surface-card)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-primary)',
+            backdropFilter: 'blur(20px)',
           }}>
-            ⚡ Son Aktiviteler
-          </div>
-          <div style={{ padding: 'var(--space-3) var(--space-5)' }}>
-            {data.recentActivity.length === 0 ? (
-              <div style={{ color: 'var(--text-muted)', padding: 'var(--space-4) 0', textAlign: 'center' }}>
-                Henüz aktivite yok
-              </div>
-            ) : (
-              data.recentActivity.map((item, i) => (
-                <div key={i} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-3)',
-                  padding: 'var(--space-2) 0',
-                  borderBottom: i < data.recentActivity.length - 1 ? '1px solid var(--border-primary)' : 'none',
-                }}>
-                  <span style={{ fontSize: '16px' }}>{item.type === 'order' ? '📦' : '💬'}</span>
-                  <span style={{ flex: 1, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }} className="truncate">
-                    {item.title}
-                  </span>
-                  {item.amount && (
-                    <span style={{ color: 'var(--accent-green-light)', fontWeight: 600, fontSize: 'var(--text-sm)' }}>
-                      {parseFloat(item.amount).toLocaleString('tr-TR')} ₺
-                    </span>
-                  )}
-                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                    {item.ts ? new Date(item.ts).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}
-                  </span>
+            <div style={{
+              padding: 'var(--space-4) var(--space-5)',
+              borderBottom: '1px solid var(--border-primary)',
+              fontWeight: 600,
+            }}>
+              ⚡ Son Aktiviteler
+            </div>
+            <div style={{ padding: 'var(--space-3) var(--space-5)' }}>
+              {data.recentActivity.length === 0 ? (
+                <div style={{ color: 'var(--text-muted)', padding: 'var(--space-4) 0', textAlign: 'center' }}>
+                  Henüz aktivite yok
                 </div>
-              ))
-            )}
+              ) : (
+                data.recentActivity.map((item, i) => (
+                  <div key={i} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-3)',
+                    padding: 'var(--space-2) 0',
+                    borderBottom: i < data.recentActivity.length - 1 ? '1px solid var(--border-primary)' : 'none',
+                  }}>
+                    <span style={{ fontSize: '16px' }}>{item.type === 'order' ? '📦' : '💬'}</span>
+                    <span style={{ flex: 1, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }} className="truncate">
+                      {item.title}
+                    </span>
+                    {item.amount && (
+                      <span style={{ color: 'var(--accent-green-light)', fontWeight: 600, fontSize: 'var(--text-sm)' }}>
+                        {parseFloat(item.amount).toLocaleString('tr-TR')} ₺
+                      </span>
+                    )}
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                      {item.ts ? new Date(item.ts).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Mini Order Chart */}
+          <div style={{
+            background: 'var(--surface-card)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-primary)',
+            backdropFilter: 'blur(20px)',
+          }}>
+            <div style={{
+              padding: 'var(--space-4) var(--space-5)',
+              borderBottom: '1px solid var(--border-primary)',
+              fontWeight: 600,
+            }}>
+              📊 Son 7 Gün Sipariş
+            </div>
+            <div style={{ padding: 'var(--space-4) var(--space-5)' }}>
+              <MiniBarChart data={data.dailyOrders} />
+            </div>
           </div>
         </div>
       </div>
@@ -143,6 +173,32 @@ function StatCard({ icon, value, label, color, highlight }) {
       <div style={{ fontSize: '28px', marginBottom: '4px' }}>{icon}</div>
       <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color }}>{value}</div>
       <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '2px' }}>{label}</div>
+    </div>
+  );
+}
+
+function MiniBarChart({ data }) {
+  if (!data || data.length === 0) return <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>Veri yok</div>;
+  const max = Math.max(...data.map(d => d.count), 1);
+  const height = 120;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height, padding: '0 4px' }}>
+      {data.map((d, i) => {
+        const h = Math.max((d.count / max) * (height - 28), 4);
+        return (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700 }}>{d.count || ''}</span>
+            <div style={{
+              width: '100%', maxWidth: '40px', height: `${h}px`, borderRadius: '4px 4px 0 0',
+              background: '#a78bfa',
+              boxShadow: '0 0 8px #a78bfa66',
+              opacity: 0.6 + (d.count / max) * 0.4,
+            }} />
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{d.day}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

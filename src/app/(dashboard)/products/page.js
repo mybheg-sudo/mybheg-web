@@ -28,6 +28,8 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [total, setTotal] = useState(0);
+  const [expanded, setExpanded] = useState(null);
+  const [variants, setVariants] = useState([]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -106,6 +108,15 @@ export default function ProductsPage() {
               }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-secondary)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-primary)'; e.currentTarget.style.transform = ''; }}
+                onClick={async () => {
+                  if (expanded === product.id) { setExpanded(null); return; }
+                  setExpanded(product.id);
+                  try {
+                    const res = await fetch(`/api/products/${product.id}/variants`);
+                    const data = await res.json();
+                    if (data.success) setVariants(data.data);
+                  } catch (err) { console.error(err); }
+                }}
               >
                 {/* Image */}
                 <div style={{
@@ -157,6 +168,34 @@ export default function ProductsPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Variant Details (Expandable) */}
+                  {expanded === product.id && variants.length > 0 && (
+                    <div style={{
+                      marginTop: '8px', paddingTop: '8px',
+                      borderTop: '1px solid var(--border-primary)',
+                    }}>
+                      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>📋 Varyantlar</div>
+                      {variants.map((v, vi) => (
+                        <div key={vi} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '4px 0', borderBottom: vi < variants.length - 1 ? '1px solid var(--border-primary)' : 'none',
+                          fontSize: 'var(--text-xs)',
+                        }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>{v.title || 'Default'}</span>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--accent-green-light)' }}>{v.price ? `${parseFloat(v.price).toLocaleString('tr-TR')} ₺` : '—'}</span>
+                            <span className={`badge ${v.inventory_quantity > 5 ? 'badge-green' : v.inventory_quantity > 0 ? 'badge-orange' : 'badge-red'}`} style={{ fontSize: '9px' }}>
+                              {v.inventory_quantity ?? 0}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {expanded === product.id && variants.length === 0 && (
+                    <div style={{ marginTop: '8px', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textAlign: 'center' }}>Varyant bulunamadı</div>
+                  )}
                 </div>
               </div>
             ))}
