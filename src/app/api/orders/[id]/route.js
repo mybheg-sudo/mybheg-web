@@ -65,8 +65,8 @@ export async function PUT(request, { params }) {
     const old = await getOne(`SELECT status FROM orders WHERE id = $1`, [id]);
 
     await query(`
-      INSERT INTO order_status_logs (order_id, old_status, new_status, changed_by, source)
-      VALUES ($1, $2, $3, 'operator', 'web_panel')
+      INSERT INTO order_status_logs (order_id, old_status, new_status, changed_by, note)
+      VALUES ($1, $2, $3, 'operator', 'Web panelden güncellendi')
     `, [id, old?.status || 'UNKNOWN', status]);
 
     await query(`

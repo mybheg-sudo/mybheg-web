@@ -9,7 +9,7 @@ export async function GET(request, { params }) {
     const contact = await getOne(`
       SELECT c.*, 
         sc.email, sc.first_name, sc.last_name, sc.total_spent, sc.orders_count,
-        sc.accepts_marketing, sc.verified_email, sc.shopify_id,
+        sc.accepts_marketing, sc.verified_email, sc.shopify_customer_id,
         (SELECT COUNT(*)::int FROM messages m WHERE m.contact_id = c.id) AS message_count,
         (SELECT MAX(m.timestamp) FROM messages m WHERE m.contact_id = c.id) AS last_message_at
       FROM contacts c
