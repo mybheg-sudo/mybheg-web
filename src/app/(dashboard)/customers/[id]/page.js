@@ -78,9 +78,10 @@ export default function CustomerDetailPage() {
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Yükleniyor...</div>;
   if (!data) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Müşteri bulunamadı</div>;
 
-  const { contact, orders, messages } = data;
+  const { contact, orders, messages, shopify_stats } = data;
   const segment = getSegment(contact);
-  const totalSpent = orders.reduce((sum, o) => sum + parseFloat(o.total_price || 0), 0);
+  const statsOrders = shopify_stats?.orders_count ?? orders.length;
+  const statsSpent = shopify_stats?.total_spent ?? orders.reduce((sum, o) => sum + parseFloat(o.total_price || 0), 0);
 
   return (
     <>
@@ -212,11 +213,11 @@ export default function CustomerDetailPage() {
               borderTop: '1px solid var(--border-primary)',
             }}>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 'var(--text-lg)', color: 'var(--accent-blue)' }}>{orders.length}</div>
+                <div style={{ fontWeight: 800, fontSize: 'var(--text-lg)', color: 'var(--accent-blue)' }}>{statsOrders}</div>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Sipariş</div>
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 'var(--text-lg)', color: 'var(--accent-green-light)' }}>{formatCurrency(totalSpent)}</div>
+                <div style={{ fontWeight: 800, fontSize: 'var(--text-lg)', color: 'var(--accent-green-light)' }}>{formatCurrency(statsSpent)}</div>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Harcama</div>
               </div>
               <div>

@@ -48,7 +48,16 @@ export async function GET(request, { params }) {
 
     return NextResponse.json({
       success: true,
-      data: { contact, orders, messages, tags },
+      data: {
+        contact,
+        orders,
+        messages,
+        tags,
+        shopify_stats: {
+          orders_count: contact.orders_count || orders.length,
+          total_spent: contact.total_spent || orders.reduce((s, o) => s + parseFloat(o.total_price || 0), 0),
+        },
+      },
     });
   } catch (error) {
     console.error('Customer detail error:', error);
