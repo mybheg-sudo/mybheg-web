@@ -32,6 +32,8 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -39,6 +41,8 @@ export default function OrdersPage() {
       try {
         const params = new URLSearchParams({ status, page: page.toString() });
         if (search) params.set('search', search);
+        if (dateFrom) params.set('from', dateFrom);
+        if (dateTo) params.set('to', dateTo);
         const res = await fetch(`/api/orders?${params}`);
         const data = await res.json();
         if (data.success) {
@@ -52,7 +56,7 @@ export default function OrdersPage() {
       }
     };
     fetchOrders();
-  }, [status, search, page]);
+  }, [status, search, page, dateFrom, dateTo]);
 
   return (
     <>
@@ -69,6 +73,14 @@ export default function OrdersPage() {
             onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
+        <button className="btn btn-ghost btn-sm" style={{ marginLeft: '8px' }}
+          onClick={() => {
+            const params = new URLSearchParams({ status });
+            if (dateFrom) params.set('from', dateFrom);
+            if (dateTo) params.set('to', dateTo);
+            window.open(`/api/orders/export?${params}`, '_blank');
+          }}
+        >📥 CSV</button>
       </div>
 
       <div style={{ padding: 'var(--space-3) var(--space-6)', display: 'flex', gap: 'var(--space-2)', borderBottom: '1px solid var(--border-primary)' }}>
@@ -81,6 +93,18 @@ export default function OrdersPage() {
             {s === 'ALL' ? 'Tümü' : statusMap[s]?.label || s}
           </button>
         ))}
+        <div style={{ flex: 1 }} />
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>📅</span>
+          <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }}
+            style={{ fontSize: 'var(--text-xs)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)', border: '1px solid var(--border-primary)', color: 'var(--text-secondary)' }} />
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>—</span>
+          <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }}
+            style={{ fontSize: 'var(--text-xs)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)', border: '1px solid var(--border-primary)', color: 'var(--text-secondary)' }} />
+          {(dateFrom || dateTo) && (
+            <button className="btn btn-ghost btn-sm" onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); }} style={{ fontSize: '10px', padding: '2px 6px' }}>✕</button>
+          )}
+        </div>
       </div>
 
       <div className="page-body" style={{ padding: 0 }}>

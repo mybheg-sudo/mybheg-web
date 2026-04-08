@@ -103,7 +103,7 @@ export default function ChatWindow({ contact, messages, onSendMessage, loading, 
                 </div>
               );
             }
-            return <MessageBubble key={item.data.id || i} message={item.data} />;
+            return <MessageBubble key={item.data.id || i} message={item.data} allMessages={messages} />;
           })
         )}
         <div ref={messagesEndRef} />

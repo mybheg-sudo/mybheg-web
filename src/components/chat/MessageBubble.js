@@ -71,14 +71,33 @@ function AttachmentPreview({ message }) {
   );
 }
 
-export default function MessageBubble({ message }) {
+export default function MessageBubble({ message, allMessages }) {
   const isOutgoing = message.direction === 'outgoing';
   const isButtonReply = message.button_text;
   const hasInteractive = message.interactive_type;
 
+  // Find replied message
+  const repliedMsg = message.reply_to_message_id && allMessages
+    ? allMessages.find(m => m.whatsapp_message_id === message.reply_to_message_id)
+    : null;
+
   return (
     <div className={`message-row ${isOutgoing ? 'outgoing' : 'incoming'}`}>
       <div className="message-bubble">
+        {/* Reply context */}
+        {repliedMsg && (
+          <div style={{
+            padding: '4px 8px', marginBottom: '6px', borderRadius: 'var(--radius-sm)',
+            borderLeft: '3px solid var(--accent-purple)', background: 'rgba(167,139,250,0.08)',
+            fontSize: 'var(--text-xs)', color: 'var(--text-muted)',
+            maxHeight: '40px', overflow: 'hidden',
+          }}>
+            <div style={{ fontWeight: 600, fontSize: '10px', color: 'var(--accent-purple)', marginBottom: '1px' }}>
+              {repliedMsg.direction === 'incoming' ? '↩ Müşteri' : '↩ Sen'}
+            </div>
+            <div className="truncate">{repliedMsg.content || '📎 Medya'}</div>
+          </div>
+        )}
         {/* Source label for AI/system messages */}
         {isOutgoing && <SourceLabel source={message.source} />}
 

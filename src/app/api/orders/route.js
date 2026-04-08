@@ -25,6 +25,18 @@ export async function GET(request) {
       params.push(`%${search}%`);
     }
 
+    let dateClause = '';
+    const dateFrom = searchParams.get('from');
+    const dateTo = searchParams.get('to');
+    if (dateFrom) {
+      dateClause += ` AND o.created_at_shopify >= $${params.length + 1}`;
+      params.push(dateFrom);
+    }
+    if (dateTo) {
+      dateClause += ` AND o.created_at_shopify < ($${params.length + 1}::date + INTERVAL '1 day')`;
+      params.push(dateTo);
+    }
+
     const orders = await getMany(`
       SELECT o.id, o.order_name, o.customer_name, o.phone_number, o.email,
         o.total_price, o.currency, o.status, o.financial_status, o.fulfillment_status,
@@ -34,7 +46,7 @@ export async function GET(request) {
           CASE WHEN o.line_items IS NOT NULL THEN jsonb_array_length(o.line_items) ELSE 0 END
         ) AS item_count
       FROM orders o
-      WHERE 1=1 ${statusClause} ${searchClause}
+      WHERE 1=1 ${statusClause} ${searchClause} ${dateClause}
       ORDER BY o.created_at_shopify DESC NULLS LAST
       LIMIT $1 OFFSET $2
     `, params);
