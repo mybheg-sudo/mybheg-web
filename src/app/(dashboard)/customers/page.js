@@ -119,7 +119,9 @@ export default function CustomersPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div className="avatar avatar-sm">{getInitials(c.name || c.phone)}</div>
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>{c.name || c.first_name && `${c.first_name} ${c.last_name || ''}` || 'İsimsiz'}</div>
+                            <Link href={`/customers/${c.id}`} style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-link)', textDecoration: 'none' }}>
+                              {c.name || c.first_name && `${c.first_name} ${c.last_name || ''}` || 'İsimsiz'}
+                            </Link>
                           </div>
                         </div>
                       </td>

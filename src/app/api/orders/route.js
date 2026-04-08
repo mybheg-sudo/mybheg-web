@@ -29,7 +29,10 @@ export async function GET(request) {
       SELECT o.id, o.order_name, o.customer_name, o.phone_number, o.email,
         o.total_price, o.currency, o.status, o.financial_status, o.fulfillment_status,
         o.first_message_sent, o.reminder_sent, o.shopify_tags, o.created_at_shopify,
-        (SELECT COUNT(*)::int FROM order_line_items li WHERE li.order_id = o.id) AS item_count
+        COALESCE(
+          NULLIF((SELECT COUNT(*)::int FROM order_line_items li WHERE li.order_id = o.id), 0),
+          CASE WHEN o.line_items IS NOT NULL THEN jsonb_array_length(o.line_items) ELSE 0 END
+        ) AS item_count
       FROM orders o
       WHERE 1=1 ${statusClause} ${searchClause}
       ORDER BY o.created_at_shopify DESC NULLS LAST
