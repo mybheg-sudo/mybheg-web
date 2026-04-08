@@ -100,9 +100,66 @@ function SaveBar({ saving, onSave, message }) {
   );
 }
 
+function ToggleButton({ active, onChange }) {
+  return (
+    <button
+      onClick={() => onChange(!active)}
+      className={`badge ${active ? 'badge-green' : 'badge-gray'}`}
+      style={{ cursor: 'pointer', border: 'none', minWidth: '60px', textAlign: 'center' }}
+    >
+      {active ? 'Aktif' : 'Kapalı'}
+    </button>
+  );
+}
+
+/* ── Settings Hook ────────────────────────────── */
+
+function useSettings(category) {
+  const [data, setData] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    fetch(`/api/settings?category=${category}`)
+      .then(r => r.json())
+      .then(res => { if (res.success) setData(res.data); })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, [category]);
+
+  const save = async () => {
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, settings: data }),
+      });
+      const result = await res.json();
+      if (result.success) setMessage('✅ Kaydedildi');
+      else setMessage('❌ ' + result.error);
+    } catch (err) {
+      setMessage('❌ Bağlantı hatası');
+    } finally {
+      setSaving(false);
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
+  const update = (key, value) => setData(prev => ({ ...prev, [key]: value }));
+
+  return { data, loading, saving, message, save, update, setData };
+}
+
 /* ── General Settings ────────────────────────────── */
 
 function GeneralSettings() {
+  const { data, loading, saving, message, save, update } = useSettings('general');
+
+  if (loading) return <div style={{ color: 'var(--text-muted)', padding: '20px' }}>Yükleniyor...</div>;
+
   return (
     <>
       <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>🏢 Genel Ayarlar</h2>
@@ -110,11 +167,11 @@ function GeneralSettings() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           <div>
             <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Firma Adı</label>
-            <input type="text" defaultValue="MYBHEG" style={{ width: '100%' }} />
+            <input type="text" value={data.company_name || ''} onChange={e => update('company_name', e.target.value)} style={{ width: '100%' }} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Zaman Dilimi</label>
-            <select defaultValue="Europe/Istanbul" style={{ width: '100%' }}>
+            <select value={data.timezone || 'Europe/Istanbul'} onChange={e => update('timezone', e.target.value)} style={{ width: '100%' }}>
               <option value="Europe/Istanbul">Türkiye (GMT+3)</option>
               <option value="Europe/Berlin">Almanya (GMT+1)</option>
             </select>
@@ -123,15 +180,16 @@ function GeneralSettings() {
       </SettingSection>
       <SettingSection title="Sipariş Ayarları" description="WhatsApp onay sistemi zaman aşımı değerleri">
         <SettingRow label="İlk Mesaj Gecikmesi" description="Sipariş alındıktan sonra ilk WhatsApp mesajının gönderilme süresi">
-          <input type="text" defaultValue="2 dk" style={{ width: '80px', textAlign: 'center' }} />
+          <input type="text" value={data.first_message_delay || ''} onChange={e => update('first_message_delay', e.target.value)} style={{ width: '80px', textAlign: 'center' }} />
         </SettingRow>
         <SettingRow label="Hatırlatma Süresi" description="Yanıt alınamazsa hatırlatma mesajı">
-          <input type="text" defaultValue="2 saat" style={{ width: '80px', textAlign: 'center' }} />
+          <input type="text" value={data.reminder_delay || ''} onChange={e => update('reminder_delay', e.target.value)} style={{ width: '80px', textAlign: 'center' }} />
         </SettingRow>
         <SettingRow label="Zaman Aşımı" description="Otomatik zaman aşımı süresi">
-          <input type="text" defaultValue="24 saat" style={{ width: '80px', textAlign: 'center' }} />
+          <input type="text" value={data.timeout_delay || ''} onChange={e => update('timeout_delay', e.target.value)} style={{ width: '80px', textAlign: 'center' }} />
         </SettingRow>
       </SettingSection>
+      <SaveBar saving={saving} onSave={save} message={message} />
     </>
   );
 }
@@ -139,6 +197,10 @@ function GeneralSettings() {
 /* ── WhatsApp Settings ────────────────────────────── */
 
 function WhatsAppSettings() {
+  const { data, loading, saving, message, save, update } = useSettings('whatsapp');
+
+  if (loading) return <div style={{ color: 'var(--text-muted)', padding: '20px' }}>Yükleniyor...</div>;
+
   return (
     <>
       <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>💬 WhatsApp Ayarları</h2>
@@ -146,22 +208,23 @@ function WhatsAppSettings() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           <div>
             <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Phone Number ID</label>
-            <input type="text" placeholder="Ör: 123456789012345" style={{ width: '100%' }} />
+            <input type="text" value={data.phone_number_id || ''} onChange={e => update('phone_number_id', e.target.value)} placeholder="Ör: 123456789012345" style={{ width: '100%' }} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Access Token</label>
-            <input type="password" placeholder="Bearer token" style={{ width: '100%' }} />
+            <input type="password" value={data.access_token || ''} onChange={e => update('access_token', e.target.value)} placeholder="Bearer token" style={{ width: '100%' }} />
           </div>
         </div>
       </SettingSection>
       <SettingSection title="Mesaj Ayarları">
         <SettingRow label="AI Otomatik Yanıt" description="Gelen mesajlara AI yanıt versin mi?">
-          <span className="badge badge-green">Aktif</span>
+          <ToggleButton active={data.ai_auto_reply !== false} onChange={v => update('ai_auto_reply', v)} />
         </SettingRow>
         <SettingRow label="Operatör Devralma" description="Manuel listeye eklenince AI durup operatöre bırakır">
-          <span className="badge badge-green">Aktif</span>
+          <ToggleButton active={data.operator_takeover !== false} onChange={v => update('operator_takeover', v)} />
         </SettingRow>
       </SettingSection>
+      <SaveBar saving={saving} onSave={save} message={message} />
     </>
   );
 }
@@ -225,8 +288,6 @@ function UserSettings() {
     fetchUsers();
   }
 
-  const roleColors = { admin: 'badge-purple', operator: 'badge-blue', viewer: 'badge-gray' };
-
   return (
     <>
       <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>👥 Kullanıcı Yönetimi</h2>
@@ -237,7 +298,6 @@ function UserSettings() {
           </button>
         </div>
 
-        {/* New User Form */}
         {showForm && (
           <form onSubmit={createUser} style={{
             padding: 'var(--space-4)', marginBottom: 'var(--space-4)',
@@ -276,7 +336,6 @@ function UserSettings() {
           </form>
         )}
 
-        {/* User Table */}
         {loading ? (
           <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>Yükleniyor...</div>
         ) : (
@@ -343,20 +402,25 @@ function UserSettings() {
 /* ── Notification Settings ────────────────────────── */
 
 function NotificationSettings() {
+  const { data, loading, saving, message, save, update } = useSettings('notifications');
+
+  if (loading) return <div style={{ color: 'var(--text-muted)', padding: '20px' }}>Yükleniyor...</div>;
+
   return (
     <>
       <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>🔔 Bildirim Ayarları</h2>
       <SettingSection title="WhatsApp Bildirimleri" description="Admin telefonuna gönderilecek bildirimler">
         <SettingRow label="Hata Bildirimi" description="Sistem hatalarında admin'e WhatsApp mesajı">
-          <span className="badge badge-green">Aktif</span>
+          <ToggleButton active={data.error_notification !== false} onChange={v => update('error_notification', v)} />
         </SettingRow>
         <SettingRow label="Stok Uyarısı" description="Stok düştüğünde bildirim">
-          <span className="badge badge-green">Aktif</span>
+          <ToggleButton active={data.stock_alert !== false} onChange={v => update('stock_alert', v)} />
         </SettingRow>
         <SettingRow label="Yeni Sipariş" description="Her yeni siparişte bildirim">
-          <span className="badge badge-gray">Kapalı</span>
+          <ToggleButton active={data.new_order === true} onChange={v => update('new_order', v)} />
         </SettingRow>
       </SettingSection>
+      <SaveBar saving={saving} onSave={save} message={message} />
     </>
   );
 }
@@ -364,28 +428,27 @@ function NotificationSettings() {
 /* ── Integration Settings ────────────────────────── */
 
 function IntegrationSettings() {
+  const { data, loading, saving, message, save, update } = useSettings('integrations');
+
+  if (loading) return <div style={{ color: 'var(--text-muted)', padding: '20px' }}>Yükleniyor...</div>;
+
   return (
     <>
       <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>🔗 Entegrasyonlar</h2>
       <SettingSection title="Shopify" description="Shopify mağaza bağlantısı">
         <SettingRow label="Mağaza URL" description="Shopify admin URL">
-          <input type="text" placeholder="store.myshopify.com" style={{ width: '220px' }} />
+          <input type="text" value={data.shopify_url || ''} onChange={e => update('shopify_url', e.target.value)} placeholder="store.myshopify.com" style={{ width: '220px' }} />
         </SettingRow>
         <SettingRow label="API Token" description="Admin API erişim tokeni">
-          <input type="password" placeholder="shpat_xxxxx" style={{ width: '220px' }} />
-        </SettingRow>
-        <SettingRow label="Webhook Durumu" description="Sipariş/ürün/müşteri webhook'ları">
-          <span className="badge badge-green">4 Aktif</span>
+          <input type="password" value={data.shopify_token || ''} onChange={e => update('shopify_token', e.target.value)} placeholder="shpat_xxxxx" style={{ width: '220px' }} />
         </SettingRow>
       </SettingSection>
       <SettingSection title="n8n" description="Otomasyon motoru bağlantısı">
         <SettingRow label="n8n URL" description="n8n instance adresi">
-          <input type="text" placeholder="https://n8n.example.com" style={{ width: '280px' }} />
-        </SettingRow>
-        <SettingRow label="Aktif Workflow" description="Çalışan otomasyon sayısı">
-          <span className="badge badge-blue">20 Workflow</span>
+          <input type="text" value={data.n8n_url || ''} onChange={e => update('n8n_url', e.target.value)} placeholder="https://n8n.example.com" style={{ width: '280px' }} />
         </SettingRow>
       </SettingSection>
+      <SaveBar saving={saving} onSave={save} message={message} />
     </>
   );
 }
@@ -393,6 +456,10 @@ function IntegrationSettings() {
 /* ── AI Settings ────────────────────────────────── */
 
 function AISettings() {
+  const { data, loading, saving, message, save, update } = useSettings('ai');
+
+  if (loading) return <div style={{ color: 'var(--text-muted)', padding: '20px' }}>Yükleniyor...</div>;
+
   return (
     <>
       <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>🤖 AI Ayarları</h2>
@@ -400,7 +467,7 @@ function AISettings() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           <div>
             <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>AI Model</label>
-            <select defaultValue="gpt-4o-mini" style={{ width: '100%' }}>
+            <select value={data.model || 'gpt-4o-mini'} onChange={e => update('model', e.target.value)} style={{ width: '100%' }}>
               <option value="gpt-4o-mini">GPT-4o Mini</option>
               <option value="gpt-4o">GPT-4o</option>
               <option value="gpt-4-turbo">GPT-4 Turbo</option>
@@ -409,16 +476,18 @@ function AISettings() {
           <div>
             <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Sistem Prompt</label>
             <textarea rows={6} style={{ width: '100%', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}
-              defaultValue={`Sen bir müşteri hizmetleri asistanısın. Firma: MYBHEG\n\nKurallar:\n- Türkçe yanıt ver\n- Kibar ve profesyonel ol\n- Sipariş durumu sorarsa veritabanından kontrol et\n- Emin değilsen operatöre yönlendir`}
+              value={data.system_prompt || ''}
+              onChange={e => update('system_prompt', e.target.value)}
             />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Çalışma Saatleri</label>
-            <input type="text" defaultValue="09:00 - 18:00" style={{ width: '200px' }} />
+            <input type="text" value={data.working_hours || ''} onChange={e => update('working_hours', e.target.value)} style={{ width: '200px' }} />
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginLeft: '8px' }}>Dışında sadece AI yanıt verir</span>
           </div>
         </div>
       </SettingSection>
+      <SaveBar saving={saving} onSave={save} message={message} />
     </>
   );
 }
