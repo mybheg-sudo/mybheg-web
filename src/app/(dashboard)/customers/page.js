@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Pagination from '@/components/ui/Pagination';
 
 const segmentMap = {
   'vip': { icon: '⭐', label: 'VIP', cls: 'badge-orange' },
@@ -31,13 +32,14 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [segment, setSegment] = useState('all');
+  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
     const fetchCustomers = async () => {
       setLoading(true);
       try {
-        const params = new URLSearchParams({ segment });
+        const params = new URLSearchParams({ segment, page: page.toString() });
         if (search) params.set('search', search);
         const res = await fetch(`/api/customers?${params}`);
         const data = await res.json();
@@ -52,7 +54,7 @@ export default function CustomersPage() {
       }
     };
     fetchCustomers();
-  }, [search, segment]);
+  }, [search, segment, page]);
 
   return (
     <>
@@ -66,7 +68,7 @@ export default function CustomersPage() {
             type="text"
             placeholder="İsim, telefon, e-posta..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
       </div>
@@ -148,6 +150,7 @@ export default function CustomersPage() {
             </tbody>
           </table>
         )}
+        <Pagination page={page} total={total} limit={30} onPageChange={setPage} />
       </div>
     </>
   );

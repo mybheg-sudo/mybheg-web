@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Pagination from '@/components/ui/Pagination';
 
 const statusMap = {
   'PENDING': { cls: 'badge-orange', label: '⏳ Bekliyor' },
@@ -135,6 +136,7 @@ export default function OrdersPage() {
             </tbody>
           </table>
         )}
+        <Pagination page={page} total={total} limit={30} onPageChange={setPage} />
       </div>
     </>
   );
