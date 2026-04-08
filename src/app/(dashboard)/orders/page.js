@@ -116,7 +116,7 @@ export default function OrdersPage() {
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                       onMouseLeave={e => e.currentTarget.style.background = ''}>
                       <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text-link)', cursor: 'pointer' }}>{order.order_name || `#${order.id}`}</span>
+                        <Link href={`/orders/${order.id}`} style={{ fontWeight: 600, color: 'var(--text-link)', textDecoration: 'none' }}>{order.order_name || `#${order.id}`}</Link>
                       </td>
                       <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)' }}>{order.customer_name || '—'}</td>
                       <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{order.phone_number}</td>

@@ -9,7 +9,7 @@ async function getDashboardData(userId) {
         FROM orders WHERE created_at > NOW() - INTERVAL '24 hours' AND user_id = $1
       `, [userId]),
       getOne(`SELECT COUNT(*) as count FROM orders WHERE status = 'PENDING' AND user_id = $1`, [userId]),
-      getOne(`SELECT COUNT(*) as count FROM messages WHERE timestamp > NOW() - INTERVAL '24 hours'`),
+      getOne(`SELECT COUNT(*) as count FROM messages WHERE timestamp > NOW() - INTERVAL '24 hours' AND user_id = $1`, [userId]),
       getOne(`SELECT COUNT(*) as count FROM contacts WHERE user_id = $1`, [userId]),
       getOne(`SELECT COUNT(*) as count FROM shopify_products WHERE status = 'active'`),
       getMany(`

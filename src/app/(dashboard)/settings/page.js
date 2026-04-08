@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
@@ -53,6 +53,8 @@ export default function SettingsPage() {
   );
 }
 
+/* ── Shared Components ────────────────────────────── */
+
 function SettingSection({ title, description, children }) {
   return (
     <div style={{
@@ -72,11 +74,8 @@ function SettingSection({ title, description, children }) {
 function SettingRow({ label, description, children }) {
   return (
     <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: 'var(--space-3) 0',
-      borderBottom: '1px solid var(--border-primary)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: 'var(--space-3) 0', borderBottom: '1px solid var(--border-primary)',
     }}>
       <div>
         <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>{label}</div>
@@ -86,6 +85,22 @@ function SettingRow({ label, description, children }) {
     </div>
   );
 }
+
+function SaveBar({ saving, onSave, message }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+      gap: '12px', marginTop: 'var(--space-4)',
+    }}>
+      {message && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-green-light)' }}>{message}</span>}
+      <button className="btn btn-primary" onClick={onSave} disabled={saving}>
+        {saving ? '⏳ Kaydediliyor...' : '💾 Kaydet'}
+      </button>
+    </div>
+  );
+}
+
+/* ── General Settings ────────────────────────────── */
 
 function GeneralSettings() {
   return (
@@ -102,19 +117,10 @@ function GeneralSettings() {
             <select defaultValue="Europe/Istanbul" style={{ width: '100%' }}>
               <option value="Europe/Istanbul">Türkiye (GMT+3)</option>
               <option value="Europe/Berlin">Almanya (GMT+1)</option>
-              <option value="America/New_York">New York (GMT-5)</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Dil</label>
-            <select defaultValue="tr" style={{ width: '100%' }}>
-              <option value="tr">Türkçe</option>
-              <option value="en">English</option>
             </select>
           </div>
         </div>
       </SettingSection>
-
       <SettingSection title="Sipariş Ayarları" description="WhatsApp onay sistemi zaman aşımı değerleri">
         <SettingRow label="İlk Mesaj Gecikmesi" description="Sipariş alındıktan sonra ilk WhatsApp mesajının gönderilme süresi">
           <input type="text" defaultValue="2 dk" style={{ width: '80px', textAlign: 'center' }} />
@@ -130,6 +136,8 @@ function GeneralSettings() {
   );
 }
 
+/* ── WhatsApp Settings ────────────────────────────── */
+
 function WhatsAppSettings() {
   return (
     <>
@@ -143,10 +151,6 @@ function WhatsAppSettings() {
           <div>
             <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Access Token</label>
             <input type="password" placeholder="Bearer token" style={{ width: '100%' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Webhook Verify Token</label>
-            <input type="text" placeholder="Custom verify token" style={{ width: '100%' }} />
           </div>
         </div>
       </SettingSection>
@@ -162,49 +166,187 @@ function WhatsAppSettings() {
   );
 }
 
+/* ── User Settings (FROM DB) ────────────────────── */
+
 function UserSettings() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ username: '', password: '', display_name: '', system_phone: '', role: 'operator' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { fetchUsers(); }, []);
+
+  async function fetchUsers() {
+    try {
+      const res = await fetch('/api/users');
+      const data = await res.json();
+      if (data.success) setUsers(data.data);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  }
+
+  async function createUser(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowForm(false);
+        setForm({ username: '', password: '', display_name: '', system_phone: '', role: 'operator' });
+        fetchUsers();
+      } else {
+        alert(data.error || 'Hata oluştu');
+      }
+    } catch (err) { alert('Bağlantı hatası'); }
+    finally { setSaving(false); }
+  }
+
+  async function toggleActive(userId, currentActive) {
+    await fetch(`/api/users/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: !currentActive }),
+    });
+    fetchUsers();
+  }
+
+  async function changeRole(userId, newRole) {
+    await fetch(`/api/users/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole }),
+    });
+    fetchUsers();
+  }
+
+  const roleColors = { admin: 'badge-purple', operator: 'badge-blue', viewer: 'badge-gray' };
+
   return (
     <>
       <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>👥 Kullanıcı Yönetimi</h2>
       <SettingSection title="Kullanıcılar" description="Panel erişimi olan kullanıcılar">
         <div style={{ marginBottom: 'var(--space-3)' }}>
-          <button className="btn btn-primary btn-sm">+ Yeni Kullanıcı</button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>
+            {showForm ? '✕ İptal' : '+ Yeni Kullanıcı'}
+          </button>
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
-              {['Kullanıcı', 'Rol', 'Durum', 'İşlem'].map(h => (
-                <th key={h} style={{ padding: 'var(--space-2) var(--space-3)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'left' }}>{h}</th>
+
+        {/* New User Form */}
+        {showForm && (
+          <form onSubmit={createUser} style={{
+            padding: 'var(--space-4)', marginBottom: 'var(--space-4)',
+            background: 'var(--bg-hover)', borderRadius: 'var(--radius-md)',
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)',
+          }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: '4px' }}>Kullanıcı Adı *</label>
+              <input type="text" required value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} style={{ width: '100%' }} placeholder="ornek123" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: '4px' }}>Şifre *</label>
+              <input type="password" required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} style={{ width: '100%' }} placeholder="••••••" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: '4px' }}>Ad Soyad *</label>
+              <input type="text" required value={form.display_name} onChange={e => setForm({ ...form, display_name: e.target.value })} style={{ width: '100%' }} placeholder="Ahmet Yılmaz" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: '4px' }}>Telefon</label>
+              <input type="text" value={form.system_phone} onChange={e => setForm({ ...form, system_phone: e.target.value })} style={{ width: '100%' }} placeholder="905xxxxxxxxx" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, marginBottom: '4px' }}>Rol</label>
+              <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} style={{ width: '100%' }}>
+                <option value="operator">Operatör</option>
+                <option value="viewer">İzleyici</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <button type="submit" className="btn btn-primary" disabled={saving} style={{ width: '100%' }}>
+                {saving ? '⏳ Oluşturuluyor...' : '✅ Oluştur'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* User Table */}
+        {loading ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>Yükleniyor...</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                {['Kullanıcı', 'Rol', 'Durum', 'Oluşturulma', 'İşlem'].map(h => (
+                  <th key={h} style={{ padding: 'var(--space-2) var(--space-3)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'left' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(user => (
+                <tr key={user.id} style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                  <td style={{ padding: 'var(--space-2) var(--space-3)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div className="avatar avatar-sm">{(user.display_name || user.username)[0].toUpperCase()}</div>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>{user.display_name}</div>
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{user.username}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: 'var(--space-2) var(--space-3)' }}>
+                    <select value={user.role} onChange={e => changeRole(user.id, e.target.value)}
+                      style={{ fontSize: 'var(--text-xs)', padding: '2px 6px', borderRadius: '4px', background: 'var(--bg-hover)', border: '1px solid var(--border-primary)' }}>
+                      <option value="admin">Admin</option>
+                      <option value="operator">Operatör</option>
+                      <option value="viewer">İzleyici</option>
+                    </select>
+                  </td>
+                  <td style={{ padding: 'var(--space-2) var(--space-3)' }}>
+                    <button onClick={() => toggleActive(user.id, user.is_active)}
+                      className={`badge ${user.is_active ? 'badge-green' : 'badge-red'}`}
+                      style={{ cursor: 'pointer', border: 'none' }}>
+                      {user.is_active ? 'Aktif' : 'Pasif'}
+                    </button>
+                  </td>
+                  <td style={{ padding: 'var(--space-2) var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString('tr-TR') : '—'}
+                  </td>
+                  <td style={{ padding: 'var(--space-2) var(--space-3)' }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => {
+                      const newPass = prompt('Yeni şifre girin:');
+                      if (newPass) {
+                        fetch(`/api/users/${user.id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ password: newPass }),
+                        }).then(() => alert('Şifre güncellendi'));
+                      }
+                    }}>🔑 Şifre</button>
+                  </td>
+                </tr>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
-              <td style={{ padding: 'var(--space-2) var(--space-3)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div className="avatar avatar-sm">A</div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>Admin</div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>admin</div>
-                  </div>
-                </div>
-              </td>
-              <td style={{ padding: 'var(--space-2) var(--space-3)' }}><span className="badge badge-purple">Admin</span></td>
-              <td style={{ padding: 'var(--space-2) var(--space-3)' }}><span className="badge badge-green">Aktif</span></td>
-              <td style={{ padding: 'var(--space-2) var(--space-3)' }}><button className="btn btn-ghost btn-sm">Düzenle</button></td>
-            </tr>
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        )}
       </SettingSection>
     </>
   );
 }
 
+/* ── Notification Settings ────────────────────────── */
+
 function NotificationSettings() {
   return (
     <>
       <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>🔔 Bildirim Ayarları</h2>
-      <SettingSection title="WhatsApp Bildirimleri" description="Admin telefonuna gönderilecek bildiriimler">
+      <SettingSection title="WhatsApp Bildirimleri" description="Admin telefonuna gönderilecek bildirimler">
         <SettingRow label="Hata Bildirimi" description="Sistem hatalarında admin'e WhatsApp mesajı">
           <span className="badge badge-green">Aktif</span>
         </SettingRow>
@@ -218,6 +360,8 @@ function NotificationSettings() {
     </>
   );
 }
+
+/* ── Integration Settings ────────────────────────── */
 
 function IntegrationSettings() {
   return (
@@ -245,6 +389,8 @@ function IntegrationSettings() {
     </>
   );
 }
+
+/* ── AI Settings ────────────────────────────────── */
 
 function AISettings() {
   return (

@@ -45,14 +45,17 @@ export async function PUT(request, { params }) {
     const { id } = await params;
     const { status } = await request.json();
 
-    await query(`
-      UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2
-    `, [status, id]);
+    // Get old status BEFORE updating
+    const old = await getOne(`SELECT status FROM orders WHERE id = $1`, [id]);
 
     await query(`
       INSERT INTO order_status_logs (order_id, old_status, new_status, changed_by, source)
-      VALUES ($1, (SELECT status FROM orders WHERE id = $1), $2, 'operator', 'web_panel')
-    `, [id, status]);
+      VALUES ($1, $2, $3, 'operator', 'web_panel')
+    `, [id, old?.status || 'UNKNOWN', status]);
+
+    await query(`
+      UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2
+    `, [status, id]);
 
     return NextResponse.json({ success: true });
   } catch (error) {
