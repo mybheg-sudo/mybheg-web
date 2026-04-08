@@ -14,7 +14,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Dosya ve contact_id gerekli' }, { status: 400 });
     }
 
-    // Get contact phone
+    // Verify contact exists
     const contact = await getOne(`SELECT phone FROM contacts WHERE id = $1`, [contactId]);
     if (!contact) {
       return NextResponse.json({ success: false, error: 'Kişi bulunamadı' }, { status: 404 });
@@ -40,19 +40,27 @@ export async function POST(request) {
 
     const fileUrl = `/uploads/${filename}`;
 
-    // Save message record
-    const result = await query(`
-      INSERT INTO messages (contact_id, direction, type, content, source, status, timestamp,
-        attachment_type, attachment_url, attachment_filename, attachment_caption)
-      VALUES ($1, 'outgoing', $2, $3, 'operator', 'sent', NOW(),
-        $4, $5, $6, $7)
+    // 1. Insert message record
+    const msgResult = await query(`
+      INSERT INTO messages (contact_id, direction, type, content, source, status, timestamp)
+      VALUES ($1, 'outgoing', $2, $3, 'operator', 'sent', NOW())
       RETURNING id
-    `, [contactId, attachmentType, caption || file.name, attachmentType, fileUrl, file.name, caption]);
+    `, [contactId, attachmentType, caption || file.name]);
+
+    const messageId = msgResult.rows?.[0]?.id;
+
+    // 2. Insert into message_attachments (proper schema)
+    if (messageId) {
+      await query(`
+        INSERT INTO message_attachments (message_id, type, mime_type, url, filename, file_size, caption)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `, [messageId, attachmentType, mimeType, fileUrl, file.name, file.size, caption || null]);
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        id: result.rows?.[0]?.id,
+        id: messageId,
         type: attachmentType,
         url: fileUrl,
         filename: file.name,
@@ -63,9 +71,3 @@ export async function POST(request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};

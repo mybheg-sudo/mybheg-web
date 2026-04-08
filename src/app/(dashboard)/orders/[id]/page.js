@@ -308,12 +308,36 @@ export default function OrderDetailPage() {
                 <div style={{ fontWeight: 600, fontSize: 'var(--text-md)', marginBottom: '4px' }}>{order.customer_name || '—'}</div>
                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '2px' }}>{order.phone_number}</div>
                 {order.email && <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '12px' }}>{order.email}</div>}
-                <Link href={`/conversations`}
-                  style={{ fontSize: 'var(--text-xs)', color: 'var(--text-link)', textDecoration: 'none' }}>
-                  💬 Sohbete Git →
-                </Link>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <Link href={`/conversations`}
+                    style={{ fontSize: 'var(--text-xs)', color: 'var(--text-link)', textDecoration: 'none' }}>
+                    💬 Sohbete Git →
+                  </Link>
+                </div>
               </div>
             </div>
+
+            {/* Shipping Address */}
+            {order.shipping_address && (() => {
+              try {
+                const addr = typeof order.shipping_address === 'string' ? JSON.parse(order.shipping_address) : order.shipping_address;
+                return (
+                  <div style={cardStyle}>
+                    <div style={cardHeaderStyle}>📍 Teslimat Adresi</div>
+                    <div style={cardBodyStyle}>
+                      {addr.name && <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', marginBottom: '4px' }}>{addr.name}</div>}
+                      {addr.address1 && <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{addr.address1}</div>}
+                      {addr.address2 && <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{addr.address2}</div>}
+                      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {[addr.city, addr.province, addr.zip].filter(Boolean).join(', ')}
+                      </div>
+                      {addr.country && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: '2px' }}>{addr.country}</div>}
+                      {addr.phone && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '4px' }}>📞 {addr.phone}</div>}
+                    </div>
+                  </div>
+                );
+              } catch { return null; }
+            })()}
 
             {/* Payment & Status */}
             <div style={cardStyle}>

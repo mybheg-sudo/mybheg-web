@@ -113,7 +113,7 @@ export default function AnalyticsPage() {
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>Yükleniyor...</div>;
   if (!data) return <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>Veri yüklenemedi</div>;
 
-  const { msgStats, orderStats, customerStats, dailyOrders, dailyMessages } = data;
+  const { msgStats, orderStats, customerStats, dailyOrders, dailyMessages, topProducts } = data;
   const approvalRate = orderStats.total > 0 ? ((orderStats.approved / orderStats.total) * 100).toFixed(1) : 0;
   const aiRate = (msgStats.ai_responses + msgStats.operator_responses) > 0
     ? ((msgStats.ai_responses / (msgStats.ai_responses + msgStats.operator_responses)) * 100).toFixed(1) : 0;
@@ -230,6 +230,32 @@ export default function AnalyticsPage() {
             <MiniCard icon="📈" value={customerStats.total > 0 ? ((customerStats.new_contacts / customerStats.total) * 100).toFixed(1) + '%' : '0%'} label="Büyüme" />
           </div>
         </div>
+
+        {/* Top Products */}
+        {topProducts && topProducts.length > 0 && (
+          <div style={{ marginTop: 'var(--space-4)', background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-primary)', padding: 'var(--space-5)' }}>
+            <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 700, marginBottom: 'var(--space-3)' }}>🏆 En Çok Satan Ürünler</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  {['Ürün', 'Sipariş', 'Adet', 'Gelir'].map(h => (
+                    <th key={h} style={{ padding: 'var(--space-2) var(--space-3)', textAlign: 'left', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--border-primary)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {topProducts.map((p, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                    <td style={{ padding: 'var(--space-2) var(--space-3)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>{p.title}</td>
+                    <td style={{ padding: 'var(--space-2) var(--space-3)', fontSize: 'var(--text-sm)' }}>{p.order_count}</td>
+                    <td style={{ padding: 'var(--space-2) var(--space-3)', fontSize: 'var(--text-sm)' }}>{p.total_qty}</td>
+                    <td style={{ padding: 'var(--space-2) var(--space-3)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--accent-green-light)' }}>{formatCurrency(p.total_revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </>
   );

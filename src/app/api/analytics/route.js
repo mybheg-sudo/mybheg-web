@@ -74,9 +74,31 @@ export async function GET(request) {
       `),
     ]);
 
+    // Top products by order count
+    const topProducts = await getMany(`
+      SELECT li.title, COUNT(*)::int as order_count, SUM(li.quantity)::int as total_qty,
+        SUM(li.price * li.quantity)::numeric as total_revenue
+      FROM order_line_items li
+      JOIN orders o ON o.id = li.order_id
+      WHERE o.created_at > NOW() - INTERVAL '${interval}'
+      GROUP BY li.title
+      ORDER BY order_count DESC
+      LIMIT 5
+    `);
+
+    // Order sources
+    const orderSources = await getMany(`
+      SELECT COALESCE(source_name, 'unknown') as source, COUNT(*)::int as count
+      FROM orders
+      WHERE created_at > NOW() - INTERVAL '${interval}'
+      GROUP BY source_name
+      ORDER BY count DESC
+      LIMIT 5
+    `);
+
     return NextResponse.json({
       success: true,
-      data: { msgStats, orderStats, customerStats, dailyOrders, dailyMessages },
+      data: { msgStats, orderStats, customerStats, dailyOrders, dailyMessages, topProducts, orderSources },
     });
   } catch (error) {
     console.error('Analytics API error:', error);
