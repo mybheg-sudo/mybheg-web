@@ -6,21 +6,23 @@ function formatCurrency(v) {
 }
 
 // ─── Pure CSS/SVG Bar Chart ───
-function BarChart({ data, label, color = 'var(--accent-purple)', height = 160 }) {
+function BarChart({ data, label, color = '#a78bfa', height = 160 }) {
   if (!data || data.length === 0) return <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>Veri yok</div>;
   const max = Math.max(...data.map(d => d.value), 1);
 
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height, padding: '0 4px' }}>
       {data.map((d, i) => {
-        const h = Math.max((d.value / max) * (height - 24), 2);
+        const h = Math.max((d.value / max) * (height - 28), 4);
         return (
           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
             <span style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: 600 }}>{d.value || ''}</span>
             <div style={{
               width: '100%', maxWidth: '36px', height: `${h}px`, borderRadius: '4px 4px 0 0',
-              background: `linear-gradient(180deg, ${color}, ${color}88)`,
-              transition: 'height 0.4s ease',
+              background: color,
+              boxShadow: `0 0 8px ${color}66`,
+              opacity: 0.6 + (d.value / max) * 0.4,
+              transition: 'height 0.4s ease, opacity 0.3s ease',
             }} />
             <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{d.label}</span>
           </div>
@@ -148,7 +150,7 @@ export default function AnalyticsPage() {
             <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>📦 Günlük Siparişler</h3>
             <BarChart
               data={(dailyOrders || []).map(d => ({ value: d.count, label: d.day }))}
-              color="var(--accent-purple)"
+              color="#a78bfa"
             />
           </div>
 
@@ -157,7 +159,7 @@ export default function AnalyticsPage() {
             <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>💬 Günlük Mesajlar</h3>
             <BarChart
               data={(dailyMessages || []).map(d => ({ value: d.count, label: d.day }))}
-              color="var(--accent-cyan)"
+              color="#22d3ee"
             />
           </div>
         </div>
