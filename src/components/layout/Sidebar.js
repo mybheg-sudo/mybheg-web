@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import './Sidebar.css';
 
 const navItems = [
@@ -23,6 +24,19 @@ const settingsItems = [
 
 export default function Sidebar({ user }) {
   const pathname = usePathname();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = () => {
+      fetch('/api/conversations/unread')
+        .then(r => r.json())
+        .then(d => { if (d.success) setUnread(d.count || 0); })
+        .catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <aside className="sidebar">
@@ -43,7 +57,7 @@ export default function Sidebar({ user }) {
           >
             <span className="nav-item-icon">{item.icon}</span>
             <span>{item.label}</span>
-            {item.badge && <span className="nav-item-badge" id="unread-badge" style={{ display: 'none' }}>0</span>}
+            {item.badge && unread > 0 && <span className="nav-item-badge">{unread > 99 ? '99+' : unread}</span>}
           </Link>
         ))}
 
