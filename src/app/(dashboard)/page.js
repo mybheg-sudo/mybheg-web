@@ -1,5 +1,6 @@
 import { getMany, getOne } from '@/lib/db';
 import { headers } from 'next/headers';
+import Link from 'next/link';
 
 async function getDashboardData(userId) {
   try {
@@ -76,6 +77,31 @@ export default async function DashboardPage() {
           <StatCard icon="⏳" value={data.pendingOrders} label="Bekleyen Sipariş" color="var(--accent-orange)" highlight={data.pendingOrders > 0} />
           <StatCard icon="👥" value={data.totalContacts} label="Toplam Kişi" color="var(--accent-cyan)" />
           <StatCard icon="🏷️" value={data.activeProducts} label="Aktif Ürün" color="var(--accent-pink)" />
+        </div>
+
+        {/* Quick Actions */}
+        <div style={{
+          display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-4)',
+          flexWrap: 'wrap',
+        }}>
+          {[
+            { href: '/orders?status=PENDING', icon: '⏳', label: 'Bekleyen Siparişler', color: '#f59e0b' },
+            { href: '/conversations', icon: '💬', label: 'Mesajlar', color: '#3b82f6' },
+            { href: '/analytics', icon: '📊', label: 'Analitik', color: '#a78bfa' },
+            { href: '/customers', icon: '👥', label: 'Müşteriler', color: '#22d3ee' },
+            { href: '/campaigns', icon: '📢', label: 'Kampanya', color: '#f472b6' },
+          ].map(a => (
+            <Link key={a.href} href={a.href} style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '8px 16px', borderRadius: 'var(--radius-md)',
+              background: 'var(--surface-card)', border: '1px solid var(--border-primary)',
+              color: 'var(--text-secondary)', fontSize: 'var(--text-sm)',
+              textDecoration: 'none', transition: 'all 0.15s',
+            }}>
+              <span>{a.icon}</span>
+              <span style={{ fontWeight: 500 }}>{a.label}</span>
+            </Link>
+          ))}
         </div>
 
         {/* Bottom Row: Activity + Mini Chart */}

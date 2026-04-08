@@ -10,6 +10,10 @@ export async function GET(request) {
     const limit = 30;
     const offset = (page - 1) * limit;
 
+    const allowedSorts = ['order_name', 'customer_name', 'total_price', 'status', 'created_at_shopify'];
+    const sort = searchParams.get('sort') || 'created_at_shopify';
+    const dir = searchParams.get('dir') || 'desc';
+
     // orders tablosunda user_id kolonu yok — tüm siparişleri listele
     const params = [limit, offset];
     
@@ -47,7 +51,7 @@ export async function GET(request) {
         ) AS item_count
       FROM orders o
       WHERE 1=1 ${statusClause} ${searchClause} ${dateClause}
-      ORDER BY o.created_at_shopify DESC NULLS LAST
+      ORDER BY o.${allowedSorts.includes(sort) ? sort : 'created_at_shopify'} ${dir === 'asc' ? 'ASC' : 'DESC'} NULLS LAST
       LIMIT $1 OFFSET $2
     `, params);
 

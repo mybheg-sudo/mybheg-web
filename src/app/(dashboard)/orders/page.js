@@ -34,6 +34,8 @@ export default function OrdersPage() {
   const [total, setTotal] = useState(0);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [sortBy, setSortBy] = useState('created_at_shopify');
+  const [sortDir, setSortDir] = useState('desc');
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -43,6 +45,8 @@ export default function OrdersPage() {
         if (search) params.set('search', search);
         if (dateFrom) params.set('from', dateFrom);
         if (dateTo) params.set('to', dateTo);
+        if (sortBy) params.set('sort', sortBy);
+        if (sortDir) params.set('dir', sortDir);
         const res = await fetch(`/api/orders?${params}`);
         const data = await res.json();
         if (data.success) {
@@ -56,7 +60,13 @@ export default function OrdersPage() {
       }
     };
     fetchOrders();
-  }, [status, search, page, dateFrom, dateTo]);
+  }, [status, search, page, dateFrom, dateTo, sortBy, sortDir]);
+
+  const toggleSort = (col) => {
+    if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(col); setSortDir('desc'); }
+    setPage(1);
+  };
 
   return (
     <>
@@ -116,16 +126,30 @@ export default function OrdersPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
-                {['Sipariş', 'Müşteri', 'Telefon', 'Tutar', 'Durum', 'Ödeme', 'Kargo', 'Ürün', 'Tarih'].map(h => (
-                  <th key={h} style={{
+                {[
+                  { key: 'order_name', label: 'Sipariş' },
+                  { key: 'customer_name', label: 'Müşteri' },
+                  { key: null, label: 'Telefon' },
+                  { key: 'total_price', label: 'Tutar' },
+                  { key: 'status', label: 'Durum' },
+                  { key: null, label: 'Ödeme' },
+                  { key: null, label: 'Kargo' },
+                  { key: null, label: 'Ürün' },
+                  { key: 'created_at_shopify', label: 'Tarih' },
+                ].map((h, i) => (
+                  <th key={i} style={{
                     padding: 'var(--space-3) var(--space-4)',
                     textAlign: 'left',
                     fontSize: 'var(--text-xs)',
                     fontWeight: 600,
-                    color: 'var(--text-muted)',
+                    color: sortBy === h.key ? 'var(--accent-purple)' : 'var(--text-muted)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
-                  }}>{h}</th>
+                    cursor: h.key ? 'pointer' : 'default',
+                    userSelect: 'none',
+                  }} onClick={() => h.key && toggleSort(h.key)}>
+                    {h.label} {sortBy === h.key && (sortDir === 'asc' ? '↑' : '↓')}
+                  </th>
                 ))}
               </tr>
             </thead>
