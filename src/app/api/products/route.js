@@ -36,8 +36,18 @@ export async function GET(request) {
       ORDER BY p.updated_at DESC NULLS LAST
       LIMIT $1 OFFSET $2
     `, params);
-
-    const total = await getOne(`SELECT COUNT(*)::int as count FROM shopify_products p ${whereClause.replace(/\$\d+/g, (m) => params[parseInt(m.slice(1)) - 1] ? `'${params[parseInt(m.slice(1)) - 1]}'` : m)}`);
+    // Count total — rebuild WHERE with same params (without limit/offset)
+    const countParams = [];
+    let countWhere = 'WHERE 1=1';
+    if (status !== 'all') {
+      countParams.push(status);
+      countWhere += ` AND p.status = $${countParams.length}`;
+    }
+    if (search) {
+      countParams.push(`%${search}%`);
+      countWhere += ` AND (p.title ILIKE $${countParams.length} OR p.vendor ILIKE $${countParams.length} OR p.product_type ILIKE $${countParams.length})`;
+    }
+    const total = await getOne(`SELECT COUNT(*)::int as count FROM shopify_products p ${countWhere}`, countParams);
 
     return NextResponse.json({
       success: true,
