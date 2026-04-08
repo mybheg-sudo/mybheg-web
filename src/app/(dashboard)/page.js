@@ -4,21 +4,22 @@ import { headers } from 'next/headers';
 async function getDashboardData(userId) {
   try {
     const [todayOrders, pendingOrders, todayMessages, totalContacts, activeProducts, recentActivity] = await Promise.all([
+      // orders tablosunda user_id yok — phone_number üzerinden contacts'a bağlı
       getOne(`
         SELECT COUNT(*) as count, COALESCE(SUM(total_price), 0)::numeric as revenue 
-        FROM orders WHERE created_at > NOW() - INTERVAL '24 hours' AND user_id = $1
-      `, [userId]),
-      getOne(`SELECT COUNT(*) as count FROM orders WHERE status = 'PENDING' AND user_id = $1`, [userId]),
+        FROM orders WHERE created_at > NOW() - INTERVAL '7 days'
+      `),
+      getOne(`SELECT COUNT(*) as count FROM orders WHERE status = 'PENDING'`),
       getOne(`SELECT COUNT(*) as count FROM messages WHERE timestamp > NOW() - INTERVAL '24 hours' AND user_id = $1`, [userId]),
       getOne(`SELECT COUNT(*) as count FROM contacts WHERE user_id = $1`, [userId]),
       getOne(`SELECT COUNT(*) as count FROM shopify_products WHERE status = 'active'`),
       getMany(`
         SELECT * FROM (
           (SELECT 'order' as type, order_name as title, status, total_price as amount, created_at as ts
-          FROM orders WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5)
+          FROM orders ORDER BY created_at DESC LIMIT 5)
           UNION ALL
           (SELECT 'message' as type, SUBSTRING(content, 1, 40) as title, source as status, NULL::numeric as amount, timestamp as ts
-          FROM messages ORDER BY timestamp DESC LIMIT 5)
+          FROM messages WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 5)
         ) combined
         ORDER BY ts DESC LIMIT 8
       `, [userId]),
@@ -61,8 +62,8 @@ export default async function DashboardPage() {
           gap: 'var(--space-4)',
           marginBottom: 'var(--space-6)',
         }}>
-          <StatCard icon="📦" value={data.todayOrders} label="Bugünkü Sipariş" color="var(--accent-purple)" />
-          <StatCard icon="💰" value={`${data.revenue.toLocaleString('tr-TR')} ₺`} label="Bugünkü Gelir" color="var(--accent-green)" />
+          <StatCard icon="📦" value={data.todayOrders} label="Son 7 Gün Sipariş" color="var(--accent-purple)" />
+          <StatCard icon="💰" value={`${data.revenue.toLocaleString('tr-TR')} ₺`} label="Son 7 Gün Gelir" color="var(--accent-green)" />
           <StatCard icon="💬" value={data.todayMessages} label="Bugünkü Mesaj" color="var(--accent-blue)" />
           <StatCard icon="⏳" value={data.pendingOrders} label="Bekleyen Sipariş" color="var(--accent-orange)" highlight={data.pendingOrders > 0} />
           <StatCard icon="👥" value={data.totalContacts} label="Toplam Kişi" color="var(--accent-cyan)" />

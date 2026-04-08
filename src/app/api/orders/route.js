@@ -10,12 +10,12 @@ export async function GET(request) {
     const limit = 30;
     const offset = (page - 1) * limit;
 
-    const userId = request.headers.get('x-user-id') || 1;
-    let statusClause = '';
-    const params = [limit, offset, userId];
+    // orders tablosunda user_id kolonu yok — tüm siparişleri listele
+    const params = [limit, offset];
     
+    let statusClause = '';
     if (status !== 'ALL') {
-      statusClause = `AND o.status = $4`;
+      statusClause = `AND o.status = $${params.length + 1}`;
       params.push(status);
     }
 
@@ -31,12 +31,19 @@ export async function GET(request) {
         o.first_message_sent, o.reminder_sent, o.shopify_tags, o.created_at_shopify,
         (SELECT COUNT(*)::int FROM order_line_items li WHERE li.order_id = o.id) AS item_count
       FROM orders o
-      WHERE o.user_id = $3 ${statusClause} ${searchClause}
+      WHERE 1=1 ${statusClause} ${searchClause}
       ORDER BY o.created_at_shopify DESC NULLS LAST
       LIMIT $1 OFFSET $2
     `, params);
 
-    const total = await getOne(`SELECT COUNT(*)::int as count FROM orders WHERE user_id = ${userId} ${status !== 'ALL' ? `AND status = '${status}'` : ''}`);
+    // Count total for pagination
+    let countQuery = `SELECT COUNT(*)::int as count FROM orders WHERE 1=1`;
+    let countParams = [];
+    if (status !== 'ALL') {
+      countParams.push(status);
+      countQuery += ` AND status = $${countParams.length}`;
+    }
+    const total = await getOne(countQuery, countParams);
 
     return NextResponse.json({
       success: true,
