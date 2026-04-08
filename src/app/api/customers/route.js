@@ -47,7 +47,17 @@ export async function GET(request) {
       LIMIT $1 OFFSET $2
     `, params);
 
-    const total = await getOne(`SELECT COUNT(*)::int as count FROM contacts c LEFT JOIN shopify_customers sc ON sc.phone = c.phone ${whereClause.replace(/\$\d+/g, (m) => { const idx = parseInt(m.slice(1)) - 1; return params[idx] ? `'${params[idx]}'` : m; })}`);
+    const countParams = [userId];
+    let countWhere = 'WHERE c.user_id = $1';
+    if (search) {
+      countParams.push(`%${search}%`);
+      countWhere += ` AND (c.name ILIKE $${countParams.length} OR c.phone ILIKE $${countParams.length} OR sc.email ILIKE $${countParams.length})`;
+    }
+    if (segment === 'vip') countWhere += ` AND sc.total_spent > 5000`;
+    else if (segment === 'returning') countWhere += ` AND sc.orders_count > 1`;
+    else if (segment === 'new') countWhere += ` AND (sc.orders_count IS NULL OR sc.orders_count <= 1)`;
+    
+    const total = await getOne(`SELECT COUNT(*)::int as count FROM contacts c LEFT JOIN shopify_customers sc ON sc.phone = c.phone ${countWhere}`, countParams);
 
     return NextResponse.json({
       success: true,
