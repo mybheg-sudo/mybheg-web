@@ -181,8 +181,17 @@ export default function OrderDetailPage() {
                       {displayItems.map((item, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid var(--border-primary)' }}>
                           <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>{item.title}</div>
-                            {item.variant_title && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{item.variant_title}</div>}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              {item.image_url ? (
+                                <img src={item.image_url} alt="" style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0 }} />
+                              ) : (
+                                <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', opacity: 0.3, flexShrink: 0 }}>🏷️</div>
+                              )}
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>{item.title}</div>
+                                {item.variant_title && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{item.variant_title}</div>}
+                              </div>
+                            </div>
                           </td>
                           <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{item.sku || '—'}</td>
                           <td style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 600 }}>{item.quantity}</td>

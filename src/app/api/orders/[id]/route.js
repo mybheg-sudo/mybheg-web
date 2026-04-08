@@ -19,7 +19,11 @@ export async function GET(request, { params }) {
 
     const [dbLineItems, fulfillments, statusLogs] = await Promise.all([
       getMany(`
-        SELECT * FROM order_line_items WHERE order_id = $1 ORDER BY id
+        SELECT li.*, 
+          (SELECT spi.src FROM shopify_product_images spi 
+           WHERE spi.shopify_product_id = li.shopify_product_id::bigint AND spi.position = 1 LIMIT 1
+          ) AS image_url
+        FROM order_line_items li WHERE li.order_id = $1 ORDER BY li.id
       `, [id]),
       getMany(`
         SELECT * FROM order_fulfillments WHERE order_id = $1 ORDER BY created_at DESC
