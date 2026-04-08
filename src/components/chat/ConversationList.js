@@ -95,7 +95,7 @@ export default function ConversationList({
               <div className="conversation-info">
                 <div className="conversation-info-top">
                   <span className="conversation-name">{conv.name || conv.phone}</span>
-                  <span className="conversation-time">{formatTime(conv.last_message_at)}</span>
+                  <span className="conversation-time">{formatTime(conv.message_timestamp || conv.updated_at)}</span>
                 </div>
 
                 <div className="conversation-preview">

@@ -48,12 +48,13 @@ export async function POST(request) {
     const waMessageId = waResponse?.messages?.[0]?.id || null;
     const status = waResponse?.messages ? 'sent' : 'failed';
     const errorMsg = waResponse?.error?.message || null;
+    const userId = request.headers.get('x-user-id') || 1;
 
     const result = await query(`
       INSERT INTO messages (message_id, user_id, contact_id, direction, type, content, status, source, timestamp, error_message)
-      VALUES ($1, 1, $2, 'outgoing', $3, $4, $5, 'operator', NOW(), $6)
+      VALUES ($1, $7, $2, 'outgoing', $3, $4, $5, 'operator', NOW(), $6)
       RETURNING id, message_id, direction, type, content, status, source, timestamp
-    `, [waMessageId, contact_id, type, message, status, errorMsg]);
+    `, [waMessageId, contact_id, type, message, status, errorMsg, userId]);
 
     const savedMessage = result.rows[0];
 

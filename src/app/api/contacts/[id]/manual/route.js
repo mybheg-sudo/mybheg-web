@@ -15,15 +15,15 @@ export async function PUT(request, { params }) {
     if (manual) {
       // Add to manual response list
       await query(`
-        INSERT INTO manual_response_list (phone_number, added_by, reason)
+        INSERT INTO manual_response_list (contact_id, added_by, reason)
         VALUES ($1, 'web_panel', 'Operatör tarafından manuel moda alındı')
-        ON CONFLICT (phone_number) DO NOTHING
-      `, [contact.phone]);
+        ON CONFLICT (contact_id) DO NOTHING
+      `, [id]);
     } else {
       // Remove from manual response list
       await query(`
-        DELETE FROM manual_response_list WHERE phone_number = $1
-      `, [contact.phone]);
+        DELETE FROM manual_response_list WHERE contact_id = $1
+      `, [id]);
     }
 
     return NextResponse.json({ success: true, manual });

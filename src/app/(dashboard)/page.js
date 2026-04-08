@@ -1,24 +1,27 @@
 import { getMany, getOne } from '@/lib/db';
+import { headers } from 'next/headers';
 
-async function getDashboardData() {
+async function getDashboardData(userId) {
   try {
     const [todayOrders, pendingOrders, todayMessages, totalContacts, activeProducts, recentActivity] = await Promise.all([
       getOne(`
         SELECT COUNT(*) as count, COALESCE(SUM(total_price), 0)::numeric as revenue 
-        FROM orders WHERE created_at > NOW() - INTERVAL '24 hours'
-      `),
-      getOne(`SELECT COUNT(*) as count FROM orders WHERE status = 'PENDING'`),
+        FROM orders WHERE created_at > NOW() - INTERVAL '24 hours' AND user_id = $1
+      `, [userId]),
+      getOne(`SELECT COUNT(*) as count FROM orders WHERE status = 'PENDING' AND user_id = $1`, [userId]),
       getOne(`SELECT COUNT(*) as count FROM messages WHERE timestamp > NOW() - INTERVAL '24 hours'`),
-      getOne(`SELECT COUNT(*) as count FROM contacts WHERE user_id = 1`),
+      getOne(`SELECT COUNT(*) as count FROM contacts WHERE user_id = $1`, [userId]),
       getOne(`SELECT COUNT(*) as count FROM shopify_products WHERE status = 'active'`),
       getMany(`
-        SELECT 'order' as type, order_name as title, status, total_price as amount, created_at_shopify as ts
-        FROM orders ORDER BY created_at DESC LIMIT 5
-        UNION ALL
-        SELECT 'message' as type, SUBSTRING(content, 1, 40) as title, source as status, NULL as amount, timestamp as ts
-        FROM messages ORDER BY timestamp DESC LIMIT 5
+        SELECT * FROM (
+          (SELECT 'order' as type, order_name as title, status, total_price as amount, created_at as ts
+          FROM orders WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5)
+          UNION ALL
+          (SELECT 'message' as type, SUBSTRING(content, 1, 40) as title, source as status, NULL::numeric as amount, timestamp as ts
+          FROM messages ORDER BY timestamp DESC LIMIT 5)
+        ) combined
         ORDER BY ts DESC LIMIT 8
-      `),
+      `, [userId]),
     ]);
 
     return {
@@ -41,7 +44,9 @@ async function getDashboardData() {
 }
 
 export default async function DashboardPage() {
-  const data = await getDashboardData();
+  const headersList = await headers();
+  const userId = headersList.get('x-user-id') || 1;
+  const data = await getDashboardData(parseInt(userId));
 
   return (
     <>

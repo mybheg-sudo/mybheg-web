@@ -10,8 +10,9 @@ export async function GET(request) {
     const limit = 30;
     const offset = (page - 1) * limit;
 
-    const params = [limit, offset];
-    let whereClause = 'WHERE 1=1';
+    const userId = request.headers.get('x-user-id') || 1;
+    const params = [limit, offset, userId];
+    let whereClause = 'WHERE c.user_id = $3';
 
     if (search) {
       whereClause += ` AND (c.name ILIKE $${params.length + 1} OR c.phone ILIKE $${params.length + 1} OR sc.email ILIKE $${params.length + 1})`;
@@ -32,7 +33,7 @@ export async function GET(request) {
         sc.email, sc.first_name, sc.last_name, sc.total_spent, sc.orders_count,
         sc.accepts_marketing, sc.verified_email,
         (SELECT COUNT(*)::int FROM messages m WHERE m.contact_id = c.id) AS message_count,
-        (SELECT MAX(m.timestamp) FROM messages m WHERE m.contact_id = c.id) AS last_message_at,
+        (SELECT MAX(m.timestamp) FROM messages m WHERE m.contact_id = c.id) AS message_timestamp,
         CASE 
           WHEN sc.total_spent > 5000 THEN 'vip'
           WHEN sc.orders_count > 3 THEN 'loyal'

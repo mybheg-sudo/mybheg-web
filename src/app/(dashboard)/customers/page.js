@@ -131,7 +131,7 @@ export default function CustomersPage() {
                         {c.total_spent ? `${parseFloat(c.total_spent).toLocaleString('tr-TR')} ₺` : '—'}
                       </td>
                       <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)', textAlign: 'center' }}>{c.message_count || 0}</td>
-                      <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{formatDate(c.last_message_at)}</td>
+                      <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{formatDate(c.message_timestamp || c.updated_at)}</td>
                       <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
                         {c.accepts_marketing ? (
                           <span className="badge badge-green">✅ İzin</span>

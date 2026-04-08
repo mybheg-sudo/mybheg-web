@@ -16,8 +16,8 @@ export async function GET(request, { params }) {
         sc.verified_email, sc.accepts_marketing,
         CASE WHEN mrl.id IS NOT NULL THEN true ELSE false END AS is_manual_mode
       FROM contacts c
-      LEFT JOIN shopify_customers sc ON sc.phone = c.phone
-      LEFT JOIN manual_response_list mrl ON mrl.phone_number = c.phone AND mrl.is_active = TRUE
+      LEFT JOIN shopify_customers sc ON sc.id = c.shopify_customer_id
+      LEFT JOIN manual_response_list mrl ON mrl.contact_id = c.id AND mrl.is_active = TRUE
       WHERE c.id = $1
     `, [id]);
 
