@@ -71,6 +71,9 @@ export default function CustomersPage() {
             onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
+        <button className="btn btn-ghost btn-sm" style={{ marginLeft: '8px' }}
+          onClick={() => window.open('/api/customers/export', '_blank')}
+        >📥 CSV</button>
       </div>
 
       <div style={{ padding: 'var(--space-3) var(--space-6)', display: 'flex', gap: 'var(--space-2)', borderBottom: '1px solid var(--border-primary)' }}>
