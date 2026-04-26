@@ -20,6 +20,7 @@ const secondaryItems = [
 
 const settingsItems = [
   { href: '/settings', icon: '⚙️', label: 'Ayarlar' },
+  { href: '/admin/errors', icon: '🚨', label: 'Hata Logları' },
 ];
 
 export default function Sidebar({ user }) {

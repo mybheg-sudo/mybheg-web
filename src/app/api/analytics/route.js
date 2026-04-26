@@ -7,6 +7,57 @@ export async function GET(request) {
     const days = parseInt(searchParams.get('days') || '30');
     const interval = `${days} days`;
 
+    // ── Try to use pre-computed analytics_reports from WF-11 (if available) ──
+    let cachedReport = null;
+    try {
+      cachedReport = await getOne(`
+        SELECT report_data, created_at FROM analytics_reports 
+        WHERE report_date >= CURRENT_DATE - INTERVAL '1 day'
+        ORDER BY created_at DESC LIMIT 1
+      `);
+    } catch (e) {
+      // Table may not exist yet — fall through to live queries
+    }
+
+    if (cachedReport && cachedReport.report_data && days <= 7) {
+      // Use cached data for 7-day view (matches WF-11's 7-day window)
+      const report = typeof cachedReport.report_data === 'string' 
+        ? JSON.parse(cachedReport.report_data) : cachedReport.report_data;
+
+      return NextResponse.json({
+        success: true,
+        source: 'cached',
+        cached_at: cachedReport.created_at,
+        data: {
+          msgStats: {
+            incoming: report.message_stats?.reduce((s, d) => s + (d.incoming || 0), 0) || 0,
+            outgoing: report.message_stats?.reduce((s, d) => s + (d.outgoing || 0), 0) || 0,
+            ai_responses: report.message_stats?.reduce((s, d) => s + (d.ai_responses || 0), 0) || 0,
+            operator_responses: 0,
+            system_messages: report.message_stats?.reduce((s, d) => s + (d.system_messages || 0), 0) || 0,
+            failed: 0,
+          },
+          orderStats: {
+            total: report.order_stats?.reduce((s, d) => s + (d.total_orders || 0), 0) || 0,
+            approved: report.order_stats?.reduce((s, d) => s + (d.approved || 0), 0) || 0,
+            rejected: report.order_stats?.reduce((s, d) => s + (d.rejected || 0), 0) || 0,
+            pending: report.order_stats?.reduce((s, d) => s + (d.pending || 0), 0) || 0,
+            timeout: report.order_stats?.reduce((s, d) => s + (d.timeout || 0), 0) || 0,
+            total_revenue: report.order_stats?.reduce((s, d) => s + parseFloat(d.revenue || 0), 0) || 0,
+            avg_order: report.summary?.today_revenue || 0,
+          },
+          customerStats: { total: 0, new_contacts: 0 }, // Not in WF-11 cache
+          dailyOrders: (report.order_stats || []).map(d => ({ day: d.day, count: d.total_orders })),
+          dailyMessages: (report.message_stats || []).map(d => ({ day: d.day, count: d.total_messages })),
+          topProducts: (report.top_products || []).slice(0, 5).map(p => ({
+            title: p.title, order_count: p.order_count, total_qty: p.units_sold, total_revenue: p.total_revenue
+          })),
+          orderSources: [],
+        },
+      });
+    }
+
+    // ── Fallback: Live SQL queries ──
     const [msgStats, orderStats, customerStats, dailyOrders, dailyMessages] = await Promise.all([
       // Message statistics
       getOne(`
@@ -98,6 +149,7 @@ export async function GET(request) {
 
     return NextResponse.json({
       success: true,
+      source: 'live',
       data: { msgStats, orderStats, customerStats, dailyOrders, dailyMessages, topProducts, orderSources },
     });
   } catch (error) {

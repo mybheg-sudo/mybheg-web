@@ -19,12 +19,16 @@ export async function GET(request) {
       params.push(`%${search}%`);
     }
 
+    // ── Segment filters (unified with n8n WF-18 Journey Tracker) ──
+    // VIP: ≥5 orders AND ≥5000 TL | Loyal: ≥3 orders | Returning: ≥1 order
     if (segment === 'vip') {
-      whereClause += ` AND sc.total_spent > 5000`;
+      whereClause += ` AND sc.orders_count >= 5 AND sc.total_spent >= 5000`;
+    } else if (segment === 'loyal') {
+      whereClause += ` AND sc.orders_count >= 3 AND NOT (sc.orders_count >= 5 AND sc.total_spent >= 5000)`;
     } else if (segment === 'returning') {
-      whereClause += ` AND sc.orders_count > 1`;
+      whereClause += ` AND sc.orders_count >= 1 AND sc.orders_count < 3`;
     } else if (segment === 'new') {
-      whereClause += ` AND (sc.orders_count IS NULL OR sc.orders_count <= 1)`;
+      whereClause += ` AND (sc.orders_count IS NULL OR sc.orders_count < 1)`;
     }
 
     const customers = await getMany(`
@@ -35,9 +39,9 @@ export async function GET(request) {
         (SELECT COUNT(*)::int FROM messages m WHERE m.contact_id = c.id) AS message_count,
         (SELECT MAX(m.timestamp) FROM messages m WHERE m.contact_id = c.id) AS message_timestamp,
         CASE 
-          WHEN sc.total_spent > 5000 THEN 'vip'
-          WHEN sc.orders_count > 3 THEN 'loyal'
-          WHEN sc.orders_count > 1 THEN 'returning'
+          WHEN sc.orders_count >= 5 AND sc.total_spent >= 5000 THEN 'vip'
+          WHEN sc.orders_count >= 3 THEN 'loyal'
+          WHEN sc.orders_count >= 1 THEN 'returning'
           ELSE 'new'
         END AS segment
       FROM contacts c
@@ -53,9 +57,10 @@ export async function GET(request) {
       countParams.push(`%${search}%`);
       countWhere += ` AND (c.name ILIKE $${countParams.length} OR c.phone ILIKE $${countParams.length} OR sc.email ILIKE $${countParams.length})`;
     }
-    if (segment === 'vip') countWhere += ` AND sc.total_spent > 5000`;
-    else if (segment === 'returning') countWhere += ` AND sc.orders_count > 1`;
-    else if (segment === 'new') countWhere += ` AND (sc.orders_count IS NULL OR sc.orders_count <= 1)`;
+    if (segment === 'vip') countWhere += ` AND sc.orders_count >= 5 AND sc.total_spent >= 5000`;
+    else if (segment === 'loyal') countWhere += ` AND sc.orders_count >= 3 AND NOT (sc.orders_count >= 5 AND sc.total_spent >= 5000)`;
+    else if (segment === 'returning') countWhere += ` AND sc.orders_count >= 1 AND sc.orders_count < 3`;
+    else if (segment === 'new') countWhere += ` AND (sc.orders_count IS NULL OR sc.orders_count < 1)`;
     
     const total = await getOne(`SELECT COUNT(*)::int as count FROM contacts c LEFT JOIN shopify_customers sc ON sc.phone = c.phone ${countWhere}`, countParams);
 
