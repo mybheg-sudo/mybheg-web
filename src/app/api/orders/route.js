@@ -14,6 +14,9 @@ export async function GET(request) {
     const sort = searchParams.get('sort') || 'created_at_shopify';
     const dir = searchParams.get('dir') || 'desc';
 
+    const dateFrom = searchParams.get('from');
+    const dateTo = searchParams.get('to');
+
     // orders tablosunda user_id kolonu yok — tüm siparişleri listele
     const params = [limit, offset];
     
@@ -30,8 +33,6 @@ export async function GET(request) {
     }
 
     let dateClause = '';
-    const dateFrom = searchParams.get('from');
-    const dateTo = searchParams.get('to');
     if (dateFrom) {
       dateClause += ` AND o.created_at_shopify >= $${params.length + 1}`;
       params.push(dateFrom);
@@ -66,8 +67,6 @@ export async function GET(request) {
       countParams.push(`%${search}%`);
       countQuery += ` AND (o.order_name ILIKE $${countParams.length} OR o.customer_name ILIKE $${countParams.length} OR o.phone_number ILIKE $${countParams.length})`;
     }
-    const dateFrom = searchParams.get('from');
-    const dateTo = searchParams.get('to');
     if (dateFrom) {
       countParams.push(dateFrom);
       countQuery += ` AND o.created_at_shopify >= $${countParams.length}`;
