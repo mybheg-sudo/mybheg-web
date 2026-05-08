@@ -30,7 +30,7 @@ export async function GET(request, { params }) {
       SELECT m.id, m.message_id, m.direction, m.type, m.content, m.status, m.source,
         m.template_name, m.button_text, m.button_payload, m.reaction,
         m.reply_to_message_id, m.timestamp, m.error_code, m.error_message,
-        m.interactive_type, m.interactive_data,
+        m.interactive_type, m.interactive_data, m.media_url, m.mime_type,
         ma.id AS attachment_id, ma.type AS attachment_type, ma.url AS attachment_url,
         ma.filename AS attachment_filename, ma.caption AS attachment_caption,
         ma.mime_type AS attachment_mime, ma.thumbnail_url AS attachment_thumbnail

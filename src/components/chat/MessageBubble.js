@@ -101,8 +101,46 @@ export default function MessageBubble({ message, allMessages }) {
         {/* Source label for AI/system messages */}
         {isOutgoing && <SourceLabel source={message.source} />}
 
-        {/* Attachment */}
+        {/* Attachment (legacy) */}
         <AttachmentPreview message={message} />
+
+        {/* WhatsApp Media (from n8n media download) */}
+        {message.media_url && ['image', 'video', 'audio', 'document', 'sticker'].includes(message.type) && (
+          <div className="message-attachment">
+            {(message.type === 'image' || message.type === 'sticker') && (
+              <img
+                src={message.media_url}
+                alt={message.content !== `[${message.type}]` ? message.content : 'Resim'}
+                loading="lazy"
+                style={{ maxWidth: '100%', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+                onClick={() => window.open(message.media_url, '_blank')}
+              />
+            )}
+            {message.type === 'video' && (
+              <video
+                src={message.media_url}
+                controls
+                style={{ width: '100%', borderRadius: 'var(--radius-md)' }}
+              />
+            )}
+            {message.type === 'audio' && (
+              <div style={{ maxWidth: '240px' }}>
+                <audio src={message.media_url} controls style={{ width: '100%' }} />
+              </div>
+            )}
+            {message.type === 'document' && (
+              <div className="message-attachment-file">
+                <span className="message-attachment-file-icon">📄</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="truncate" style={{ fontWeight: 500 }}>Dosya</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{message.mime_type || 'document'}</div>
+                </div>
+                <a href={message.media_url} target="_blank" rel="noopener"
+                  style={{ color: 'var(--text-link)', fontSize: 'var(--text-xs)' }}>İndir</a>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Button reply indicator */}
         {isButtonReply && (
@@ -118,8 +156,8 @@ export default function MessageBubble({ message, allMessages }) {
           </div>
         )}
 
-        {/* Message content */}
-        {message.content && (
+        {/* Message content — hide placeholder text for media with URL */}
+        {message.content && !(message.media_url && /^\[(image|video|audio|document|sticker)\]$/.test(message.content)) && (
           <div className="message-content">{message.content}</div>
         )}
 
