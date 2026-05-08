@@ -13,16 +13,16 @@ export async function PUT(request, { params }) {
     }
 
     if (manual) {
-      // Add to manual response list
+      // Add to manual response list (or reactivate if previously deactivated)
       await query(`
-        INSERT INTO manual_response_list (contact_id, added_by, reason)
-        VALUES ($1, 'web_panel', 'Operatör tarafından manuel moda alındı')
-        ON CONFLICT (contact_id) DO NOTHING
+        INSERT INTO manual_response_list (contact_id, added_by, reason, is_active, updated_at)
+        VALUES ($1, 'web_panel', 'Operatör tarafından manuel moda alındı', TRUE, NOW())
+        ON CONFLICT (contact_id) DO UPDATE SET is_active = TRUE, updated_at = NOW(), added_by = 'web_panel'
       `, [id]);
     } else {
-      // Remove from manual response list
+      // Deactivate from manual response list
       await query(`
-        DELETE FROM manual_response_list WHERE contact_id = $1
+        UPDATE manual_response_list SET is_active = FALSE, updated_at = NOW() WHERE contact_id = $1
       `, [id]);
     }
 

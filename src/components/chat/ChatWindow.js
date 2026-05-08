@@ -24,7 +24,7 @@ function groupMessagesByDate(messages) {
   return groups;
 }
 
-export default function ChatWindow({ contact, messages, onSendMessage, loading, onToggleProfile }) {
+export default function ChatWindow({ contact, messages, onSendMessage, loading, onToggleProfile, onRefreshChat }) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -117,14 +117,15 @@ export default function ChatWindow({ contact, messages, onSendMessage, loading, 
             onClick={async () => {
               const newMode = !contact?.is_manual_mode;
               try {
-                await fetch(`/api/contacts/${contact.id}/manual`, {
+                const res = await fetch(`/api/contacts/${contact.id}/manual`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ manual: newMode }),
                 });
-                // Force re-render by parent refetch
-                if (onToggleProfile) onToggleProfile();
-                setTimeout(() => onToggleProfile && onToggleProfile(), 100);
+                const data = await res.json();
+                if (data.success && onRefreshChat) {
+                  onRefreshChat();
+                }
               } catch(e) { console.error(e); }
             }}
           >

@@ -124,6 +124,7 @@ export default function ConversationsPage() {
           onSendMessage={sendMessage}
           loading={chatLoading}
           onToggleProfile={() => setShowProfile(!showProfile)}
+          onRefreshChat={() => selectConversation(selectedId)}
         />
       ) : (
         <div className="chat-panel">
