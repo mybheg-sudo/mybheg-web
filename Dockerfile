@@ -28,6 +28,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Create media upload directory with correct ownership
+RUN mkdir -p /app/uploads/media && chown -R nextjs:nodejs /app/uploads
+
 USER nextjs
 
 EXPOSE 3000
