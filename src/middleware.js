@@ -15,7 +15,8 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get('auth_token')?.value;
+  const token = request.cookies.get('auth_token')?.value
+    || request.headers.get('authorization')?.replace('Bearer ', '');
 
   // No token → redirect to login (for pages) or 401 (for API)
   if (!token) {
