@@ -3,6 +3,19 @@ import { NextResponse } from 'next/server';
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
+  // CORS preflight for mobile app
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
+  }
+
   // Public routes — skip authentication
   if (
     pathname.startsWith('/login') ||
@@ -12,7 +25,9 @@ export function middleware(request) {
     pathname.startsWith('/favicon') ||
     pathname === '/api/auth/me'
   ) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    return response;
   }
 
   const token = request.cookies.get('auth_token')?.value
@@ -28,7 +43,9 @@ export function middleware(request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  return response;
 }
 
 export const config = {
